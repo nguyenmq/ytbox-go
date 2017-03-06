@@ -1,0 +1,4 @@
+logs
+*.vim
+*.pb.go
+notes.md

@@ -1,0 +1,32 @@
+// Defines the protobuf messsages and services used by the yt_box backend and
+// clients to the backend.
+
+syntax = "proto3";
+
+package ytbbepb;
+
+service YtbBackend {
+    // Submit a song to the backend service to be added to the play queue
+    rpc SubmitSong( UserSubmission ) returns (ErrorMessage) {}
+}
+
+// Contains error number and message
+message ErrorMessage {
+    // error number
+    uint32 errno = 1;
+
+    // title of the error message
+    string title = 2;
+
+    // error message body
+    string body = 3;
+}
+
+// Date needed to submit a song to the backend service
+message UserSubmission {
+    // Service link to the song (YouTube, Spotify, etc)
+    string link = 1;
+
+    // Id of the user who submitted the link
+    uint32 userId = 2;
+}
