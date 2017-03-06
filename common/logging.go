@@ -1,6 +1,6 @@
 // Common init function for logging
 
-package ytb_common
+package common
 
 import (
 	"io"

@@ -1,4 +1,4 @@
-package ytbbe
+package scheduler
 
 /*
  * This file describes the types and interfaces used by yt_box backend
@@ -22,10 +22,10 @@ const (
 )
 
 /*
- * ID types
+ * Id types
  */
-type UserIDType uint32
-type SongIDType uint32
+type UserIdType uint32
+type SongIdType uint32
 
 /*
  * Describes a song in the queue and the data that's necessary to track it
@@ -35,31 +35,32 @@ type SongData struct {
 	// Title of song
 	Title string
 
-	// ID of the song
-	SongID SongIDType
+	// Id of the song stores in our database
+	SongId SongIdType
 
 	// Identifier of the music service the song is on
 	Service ServiceType
 
-	ServiceID string
+	// Id used by the service the song resides on
+	ServiceId string
 
 	// Username of submitter
 	Username string
 
-	// User ID of submitter
-	UserID UserIDType
+	// User Id of submitter
+	UserId UserIdType
 }
 
 /*
  * Stringer for a *SongData
  */
 func (song *SongData) String() string {
-	return fmt.Sprintf("(%s, %s, %d, %s, %d)",
+	return fmt.Sprintf("{title: %s, serviceId: %s, songId: %d, username: %s, userId: %d}",
 		song.Title,
-		song.ServiceID,
-		song.SongID,
+		song.ServiceId,
+		song.SongId,
 		song.Username,
-		song.UserID)
+		song.UserId)
 }
 
 /*
@@ -92,5 +93,5 @@ type QueueScheduler interface {
 	PopSong() *SongData
 
 	// Remove song from the queue
-	RemoveSong(serviceID string, userID UserIDType) bool
+	RemoveSong(serviceId string, userId UserIdType) bool
 }

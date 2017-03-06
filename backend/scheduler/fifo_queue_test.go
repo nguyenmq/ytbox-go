@@ -1,4 +1,4 @@
-package ytbbe
+package scheduler
 
 import (
 	"testing"
@@ -21,10 +21,10 @@ var sampleSongs = []SongData{
 func compareSongs(first *SongData, second *SongData) bool {
 	var same bool = false
 	same = (first.Title == second.Title)
-	same = (first.ServiceID == second.ServiceID) && same
-	same = (first.SongID == second.SongID) && same
+	same = (first.ServiceId == second.ServiceId) && same
+	same = (first.SongId == second.SongId) && same
 	same = (first.Username == second.Username) && same
-	same = (first.UserID == second.UserID) && same
+	same = (first.UserId == second.UserId) && same
 
 	return same
 }

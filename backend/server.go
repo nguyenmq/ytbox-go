@@ -1,6 +1,8 @@
-// Implements the RPC server for yt_box backend
+/*
+ *Implements the RPC server for yt_box backend
+ */
 
-package ytbbe
+package backend
 
 import (
 	"log"
@@ -9,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
 	pb "github.com/nguyenmq/ytbox-go/proto"
 )
 
@@ -20,8 +23,9 @@ const (
  * Implements the backend rpc server interface
  */
 type YtbBackendServer struct {
-	listener   net.Listener // network listener
-	grpcServer *grpc.Server // grpc server
+	listener   net.Listener         // network listener
+	grpcServer *grpc.Server         // grpc server
+	queue      sched.QueueScheduler // playlist queue
 }
 
 /*
@@ -29,15 +33,21 @@ type YtbBackendServer struct {
  */
 func NewServer(addr string) *YtbBackendServer {
 	var err error
-	server := new(YtbBackendServer)
 
+	// initialize the backend server struct
+	server := new(YtbBackendServer)
 	server.listener, err = net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s with error: %v", addr, err)
 	}
 
+	// initialize the rpc server
 	server.grpcServer = grpc.NewServer()
 	pb.RegisterYtbBackendServer(server.grpcServer, server)
+
+	// initialize the song queue
+	server.queue = new(sched.FifoQueue)
+	server.queue.Init()
 
 	return server
 }
@@ -52,12 +62,21 @@ func (s *YtbBackendServer) Serve() {
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.UserSubmission) (*pb.ErrorMessage, error) {
-	log.Printf("link: %s\n", sub.Link)
-	log.Printf("user id: %d\n", sub.UserId)
+func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SongSubmission) (*pb.ErrorMessage, error) {
+	var response *pb.ErrorMessage = new(pb.ErrorMessage)
+	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
-	return &pb.ErrorMessage{
-		Errno: 0,
-		Title: "Success",
-		Body:  ""}, nil
+	song, err := fetchSongData(sub.Link, sub.UserId)
+	log.Printf("Song data: %v", song)
+
+	if err != nil {
+		response.Success = false
+		response.Message = err.Error()
+	} else {
+		response.Success = true
+		response.Message = "Success"
+		s.queue.AddSong(song)
+	}
+
+	return response, nil
 }

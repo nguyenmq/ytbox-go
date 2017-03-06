@@ -2,7 +2,7 @@
  * Implements a first-in-first-out song queue
  */
 
-package ytbbe
+package scheduler
 
 import (
 	"container/list"
@@ -94,7 +94,7 @@ func (fifo *FifoQueue) PopSong() *SongData {
 /*
  * Removes the identified song from the queue
  */
-func (fifo *FifoQueue) RemoveSong(serviceID string, userID UserIDType) bool {
+func (fifo *FifoQueue) RemoveSong(serviceId string, userId UserIdType) bool {
 	var found bool = false
 
 	fifo.lock.Lock()
@@ -103,7 +103,7 @@ func (fifo *FifoQueue) RemoveSong(serviceID string, userID UserIDType) bool {
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
 		var song *SongData = e.Value.(*SongData)
 
-		if song.ServiceID == serviceID && song.UserID == userID {
+		if song.ServiceId == serviceId && song.UserId == userId {
 			fifo.playQueue.Remove(e)
 			found = true
 			break

@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	logFile := ytb_common.InitLogger(ytbbe.LogPrefix, true)
+	logFile := common.InitLogger(backend.LogPrefix, true)
 	defer logFile.Close()
 
-	ytbServer := ytbbe.NewServer(":8000")
+	ytbServer := backend.NewServer(":8000")
 	ytbServer.Serve()
 }

@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/nguyenmq/ytbox-go/common"
-	pb "github.com/nguyenmq/ytbox-go/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	"github.com/nguyenmq/ytbox-go/common"
+	pb "github.com/nguyenmq/ytbox-go/proto"
 )
 
 const (
@@ -17,7 +18,7 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
-	logFile := ytb_common.InitLogger(prefix, true)
+	logFile := common.InitLogger(prefix, true)
 	defer logFile.Close()
 
 	conn, err := grpc.Dial("127.0.0.1:8000", opts...)
@@ -28,12 +29,10 @@ func main() {
 
 	client := pb.NewYtbBackendClient(conn)
 
-	errorMsg, err := client.SubmitSong(context.Background(), &pb.UserSubmission{"youtube.com", 0})
+	response, err := client.SubmitSong(context.Background(), &pb.SongSubmission{"https://www.youtube.com/watch?v=cdIBxhONpC0", 0})
 	if err != nil {
 		log.Fatalf("failed to call SubmitSong: %v", err)
 	}
 
-	log.Println(errorMsg.Errno)
-	log.Println(errorMsg.Title)
-	log.Println(errorMsg.Body)
+	log.Printf("Response: {flag: %t, message: %s}", response.Success, response.Message)
 }
