@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
+	pb "github.com/nguyenmq/ytbox-go/proto"
 )
 
 /*
@@ -34,10 +35,10 @@ func fetchSongData(link string, userId uint32) (*sched.SongData, error) {
 	var song *sched.SongData = &sched.SongData{
 		Title:     parsed[0],
 		SongId:    0,
-		Service:   sched.ServiceYoutube,
+		Service:   pb.ServiceType_ServiceYoutube,
 		ServiceId: parsed[1],
 		Username:  "",
-		UserId:    sched.UserIdType(userId),
+		UserId:    userId,
 	}
 
 	return song, nil

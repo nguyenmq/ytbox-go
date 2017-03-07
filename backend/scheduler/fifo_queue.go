@@ -94,7 +94,7 @@ func (fifo *FifoQueue) PopSong() *SongData {
 /*
  * Removes the identified song from the queue
  */
-func (fifo *FifoQueue) RemoveSong(serviceId string, userId UserIdType) bool {
+func (fifo *FifoQueue) RemoveSong(serviceId string, userId uint32) bool {
 	var found bool = false
 
 	fifo.lock.Lock()

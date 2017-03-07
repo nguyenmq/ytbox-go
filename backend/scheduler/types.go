@@ -6,26 +6,9 @@ package scheduler
 
 import (
 	"fmt"
+
+	pb "github.com/nguyenmq/ytbox-go/proto"
 )
-
-/*
- * Enum type for the music service identifier
- */
-type ServiceType uint32
-
-/*
- * Enum for the music service identifier
- */
-const (
-	ServiceYoutube ServiceType = iota
-	ServiceSpotify
-)
-
-/*
- * Id types
- */
-type UserIdType uint32
-type SongIdType uint32
 
 /*
  * Describes a song in the queue and the data that's necessary to track it
@@ -36,10 +19,10 @@ type SongData struct {
 	Title string
 
 	// Id of the song stores in our database
-	SongId SongIdType
+	SongId uint32
 
 	// Identifier of the music service the song is on
-	Service ServiceType
+	Service pb.ServiceType
 
 	// Id used by the service the song resides on
 	ServiceId string
@@ -48,7 +31,7 @@ type SongData struct {
 	Username string
 
 	// User Id of submitter
-	UserId UserIdType
+	UserId uint32
 }
 
 /*
@@ -93,5 +76,5 @@ type QueueScheduler interface {
 	PopSong() *SongData
 
 	// Remove song from the queue
-	RemoveSong(serviceId string, userId UserIdType) bool
+	RemoveSong(serviceId string, userId uint32) bool
 }

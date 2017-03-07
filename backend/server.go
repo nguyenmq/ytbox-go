@@ -1,5 +1,5 @@
 /*
- *Implements the RPC server for yt_box backend
+ * Implements the RPC server for yt_box backend
  */
 
 package backend
@@ -62,7 +62,7 @@ func (s *YtbBackendServer) Serve() {
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SongSubmission) (*pb.ErrorMessage, error) {
+func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SubmitMessage) (*pb.ErrorMessage, error) {
 	var response *pb.ErrorMessage = new(pb.ErrorMessage)
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
@@ -79,4 +79,26 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SongSubmissio
 	}
 
 	return response, nil
+}
+
+/*
+ * Returns the songs in the queue back to the requesting client
+ */
+func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.PlaylistMessage, error) {
+	playlist := s.queue.Playlist()
+	len := s.queue.Len()
+	songs := make([]*pb.SongMessage, len)
+
+	for i := 0; i < len; i++ {
+		songs[i] = &pb.SongMessage{
+			Title:     playlist[i].Title,
+			SongId:    playlist[i].SongId,
+			Username:  playlist[i].Username,
+			UserId:    playlist[i].UserId,
+			Service:   playlist[i].Service,
+			ServiceId: playlist[i].ServiceId,
+		}
+	}
+
+	return &pb.PlaylistMessage{Songs: songs}, nil
 }

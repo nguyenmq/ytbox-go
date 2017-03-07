@@ -10,8 +10,14 @@ package backendpb;
 
 service YtbBackend {
     // Submit a song to the backend service to be added to the play queue
-    rpc SubmitSong(SongSubmission) returns (ErrorMessage) {}
+    rpc SubmitSong(SubmitMessage) returns (ErrorMessage) {}
+
+    // Get the songs in the queue
+    rpc GetPlaylist(Empty) returns (PlaylistMessage) {}
 }
+
+// Empty message
+message Empty {}
 
 // Contains error number and message
 message ErrorMessage {
@@ -23,10 +29,41 @@ message ErrorMessage {
 }
 
 // Data needed to submit a song to the backend service
-message SongSubmission {
+message SubmitMessage {
     // Service link to the song (YouTube, Spotify, etc)
     string link = 1;
 
     // Id of the user who submitted the link
     uint32 userId = 2;
+}
+
+enum ServiceType {
+    ServiceYoutube = 0;
+    ServiceSpotify = 1;
+}
+
+// A song in the queue
+message SongMessage {
+    // title of the song
+    string title = 1;
+
+    // internal song id
+    uint32 songId = 2;
+
+    // name of user who submitted the song
+    string username = 3;
+
+    // id of user
+    uint32 userId = 4;
+
+    // id of service song belongs to
+    ServiceType service = 5;
+
+    // id specific to song's service
+    string serviceId = 6;
+}
+
+// Playlist message
+message PlaylistMessage {
+    repeated SongMessage songs = 1;
 }
