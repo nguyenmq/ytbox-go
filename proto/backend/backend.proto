@@ -17,6 +17,9 @@ service YtbBackend {
 
     // Save the playlist to the given file
     rpc SavePlaylist(FilePath) returns (Error) {}
+
+    // Pop a song off the head of the queue
+    rpc PopQueue(Empty) returns (Song) {}
 }
 
 // Empty message

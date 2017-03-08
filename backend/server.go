@@ -131,6 +131,20 @@ func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.
 }
 
 /*
+ * Pops a song off the top of the queue and returns it
+ */
+func (s *YtbBackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song, error) {
+	if s.queue.Len() > 0 {
+		song := s.queue.PopQueue()
+		log.Printf("Popped song: { %v}", song)
+		return song, nil
+	}
+
+	log.Println("Queue is empty, nothing to pop")
+	return &pb.Song{}, nil
+}
+
+/*
  * Saves the current playlist to the given file location
  */
 func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
@@ -152,6 +166,7 @@ func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath)
 	}
 
 	log.Printf("Saved current playlist to: %s", fname.Path)
+	response.Success = true
 	response.Message = "Success"
 	return response, nil
 }

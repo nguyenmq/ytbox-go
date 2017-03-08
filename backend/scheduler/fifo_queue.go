@@ -78,7 +78,7 @@ func (fifo *FifoQueue) GetPlaylist() *pb.Playlist {
 /*
  * Pops the next song off the queue and returns it
  */
-func (fifo *FifoQueue) PopSong() *pb.Song {
+func (fifo *FifoQueue) PopQueue() *pb.Song {
 	var front *pb.Song = nil
 	nowPlaying = nil
 

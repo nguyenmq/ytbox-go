@@ -30,7 +30,7 @@ type QueueScheduler interface {
 	GetPlaylist() *pb.Playlist
 
 	// Pop a song off the queue
-	PopSong() *pb.Song
+	PopQueue() *pb.Song
 
 	// Remove song from the queue
 	RemoveSong(serviceId string, userId uint32) bool

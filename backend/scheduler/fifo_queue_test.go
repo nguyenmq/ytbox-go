@@ -38,7 +38,7 @@ func TestEmptyQueue(t *testing.T) {
 	var fifo FifoQueue
 	fifo.Init()
 
-	var nextSong *pb.Song = fifo.PopSong()
+	var nextSong *pb.Song = fifo.PopQueue()
 	if nextSong != nil {
 		t.Error("Expected nil, but got", nextSong)
 	}
@@ -53,14 +53,14 @@ func TestOneQueue(t *testing.T) {
 
 	fifo.AddSong(&sampleSongs[0])
 
-	var nextSong *pb.Song = fifo.PopSong()
+	var nextSong *pb.Song = fifo.PopQueue()
 	if nextSong == nil {
 		t.Error("Expected a song but got nil")
 	} else if compareSongs(nextSong, &sampleSongs[0]) == false {
 		t.Error("Expected", &sampleSongs[0], "but got", nextSong)
 	}
 
-	nextSong = fifo.PopSong()
+	nextSong = fifo.PopQueue()
 	if nextSong != nil {
 		t.Error("Expected nil, but got", nextSong)
 	}
@@ -79,7 +79,7 @@ func TestManyQueue(t *testing.T) {
 	}
 
 	for i := 0; i < len(sampleSongs); i++ {
-		nextSong = fifo.PopSong()
+		nextSong = fifo.PopQueue()
 
 		if nextSong == nil {
 			t.Error("Expected a song but got nil")
@@ -88,7 +88,7 @@ func TestManyQueue(t *testing.T) {
 		}
 	}
 
-	nextSong = fifo.PopSong()
+	nextSong = fifo.PopQueue()
 	if nextSong != nil {
 		t.Error("Expected nil, but got", nextSong)
 	}

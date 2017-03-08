@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/nguyenmq/ytbox-go/common"
 	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
@@ -26,8 +25,8 @@ var (
 
 	// "submit" subcommand
 	submit     = app.Command("submit", "Submit a link to the queue.")
-	submitLink = submit.Flag("link", "Link to song.").Short('l').Required().String()
-	submitUser = submit.Flag("user", "User id to submit link under.").Short('u').Required().Uint32()
+	submitLink = submit.Arg("link", "Link to song.").Required().String()
+	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
 
 	// "playlist" subcommand
 	playlist = app.Command("playlist", "Get current songs in the playlist")
@@ -35,6 +34,9 @@ var (
 	// "save" subcommand
 	save     = app.Command("save", "Save the current playlist to a file")
 	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
+
+	// "pop" subcommand
+	pop = app.Command("pop", "Pop a song off the top of the queue.")
 )
 
 /*
@@ -84,6 +86,9 @@ func playlistCommand(client pb.YtbBackendClient) {
 	}
 }
 
+/*
+ * Tell the backend server to save the current playlist to a file
+ */
 func saveCommand(client pb.YtbBackendClient) {
 	response, err := client.SavePlaylist(context.Background(), &pb.FilePath{Path: *saveFile})
 	if err != nil {
@@ -94,10 +99,17 @@ func saveCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
 }
 
-func main() {
-	logFile := common.InitLogger(prefix, true)
-	defer logFile.Close()
+func popCommand(client pb.YtbBackendClient) {
+	song, err := client.PopQueue(context.Background(), &pb.Empty{})
+	if err != nil {
+		fmt.Printf("failed to call PopQueue: %v\n", err)
+		os.Exit(1)
+	}
 
+	fmt.Printf("Popped song: { %v}\n", song)
+}
+
+func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -113,5 +125,8 @@ func main() {
 
 	case save.FullCommand():
 		saveCommand(client)
+
+	case pop.FullCommand():
+		popCommand(client)
 	}
 }
