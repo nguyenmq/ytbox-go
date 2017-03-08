@@ -31,6 +31,10 @@ var (
 
 	// "playlist" subcommand
 	playlist = app.Command("playlist", "Get current songs in the playlist")
+
+	// "save" subcommand
+	save     = app.Command("save", "Save the current playlist to a file")
+	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
 )
 
 /*
@@ -54,10 +58,7 @@ func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
 /*
  * Handler to submit a song to the remote server
  */
-func submitCommand() {
-	conn, client := connectToRemote()
-	defer conn.Close()
-
+func submitCommand(client pb.YtbBackendClient) {
 	response, err := client.SubmitSong(context.Background(), &pb.SubmitMessage{*submitLink, *submitUser})
 	if err != nil {
 		fmt.Printf("failed to call SubmitSong: %v\n", err)
@@ -70,10 +71,7 @@ func submitCommand() {
 /*
  * Handler to list the songs in the playlist
  */
-func playlistCommand() {
-	conn, client := connectToRemote()
-	defer conn.Close()
-
+func playlistCommand(client pb.YtbBackendClient) {
 	playlist, err := client.GetPlaylist(context.Background(), &pb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
@@ -86,17 +84,34 @@ func playlistCommand() {
 	}
 }
 
+func saveCommand(client pb.YtbBackendClient) {
+	response, err := client.SavePlaylist(context.Background(), &pb.PathMessage{Path: *saveFile})
+	if err != nil {
+		fmt.Printf("failed to call GetPlaylist: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
+}
+
 func main() {
 	logFile := common.InitLogger(prefix, true)
 	defer logFile.Close()
 
 	kingpin.Version("0.1")
+	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
+	conn, client := connectToRemote()
+	defer conn.Close()
+
+	switch parsed {
 	case submit.FullCommand():
-		submitCommand()
+		submitCommand(client)
 
 	case playlist.FullCommand():
-		playlistCommand()
+		playlistCommand(client)
+
+	case save.FullCommand():
+		saveCommand(client)
 	}
 }

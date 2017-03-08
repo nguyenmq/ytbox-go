@@ -5,9 +5,11 @@
 package backend
 
 import (
+	"io/ioutil"
 	"log"
 	"net"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -31,7 +33,7 @@ type YtbBackendServer struct {
 /*
  * Create a new yt_box backend server
  */
-func NewServer(addr string) *YtbBackendServer {
+func NewServer(addr string, loadFile string) *YtbBackendServer {
 	var err error
 
 	// initialize the backend server struct
@@ -48,6 +50,11 @@ func NewServer(addr string) *YtbBackendServer {
 	// initialize the song queue
 	server.queue = new(sched.FifoQueue)
 	server.queue.Init()
+
+	// load a snapshot playlist if provided
+	if loadFile != "" {
+		server.loadPlaylistFromFile(loadFile)
+	}
 
 	return server
 }
@@ -81,10 +88,7 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SubmitMessage
 	return response, nil
 }
 
-/*
- * Returns the songs in the queue back to the requesting client
- */
-func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.PlaylistMessage, error) {
+func (s *YtbBackendServer) createPlaylistMessage() *pb.PlaylistMessage {
 	playlist := s.queue.Playlist()
 	len := s.queue.Len()
 	songs := make([]*pb.SongMessage, len)
@@ -100,5 +104,70 @@ func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.
 		}
 	}
 
-	return &pb.PlaylistMessage{Songs: songs}, nil
+	return &pb.PlaylistMessage{Songs: songs}
+}
+
+func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
+	var in []byte
+	var err error
+
+	in, err = ioutil.ReadFile(file)
+	if err != nil {
+		log.Printf("Error reading file: %s", file)
+		return
+	}
+
+	playlist := &pb.PlaylistMessage{}
+	err = proto.Unmarshal(in, playlist)
+	if err != nil {
+		log.Printf("Failed to parse playlist file: %v", err)
+		return
+	}
+
+	log.Printf("Loading songs from file \"%s\":", file)
+	for i := 0; i < len(playlist.Songs); i++ {
+		song := &sched.SongData{
+			Title:     playlist.Songs[i].Title,
+			SongId:    playlist.Songs[i].SongId,
+			Username:  playlist.Songs[i].Username,
+			UserId:    playlist.Songs[i].UserId,
+			Service:   playlist.Songs[i].Service,
+			ServiceId: playlist.Songs[i].ServiceId,
+		}
+		s.queue.AddSong(song)
+		log.Printf("%3d. %s", i+1, song.Title)
+	}
+}
+
+/*
+ * Returns the songs in the queue back to the requesting client
+ */
+func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.PlaylistMessage, error) {
+	return s.createPlaylistMessage(), nil
+}
+
+/*
+ * Saves the current playlist to the given file location
+ */
+func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.PathMessage) (*pb.ErrorMessage, error) {
+	response := &pb.ErrorMessage{Success: false}
+	playlist := s.createPlaylistMessage()
+
+	out, err := proto.Marshal(playlist)
+	if err != nil {
+		log.Printf("Failed to encode PlaylistMessage with error: %v", err)
+		response.Message = err.Error()
+		return response, nil
+	}
+
+	err = ioutil.WriteFile(fname.Path, out, 0644)
+	if err != nil {
+		log.Printf("Failed to write playlist to file \"%s\" with error: %v", fname.Path, err)
+		response.Message = err.Error()
+		return response, nil
+	}
+
+	log.Printf("Saved current playlist to: %s", fname.Path)
+	response.Message = "Success"
+	return response, nil
 }
