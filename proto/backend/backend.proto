@@ -2,7 +2,7 @@
 // clients to the backend.
 //
 // Usage:
-// protoc -I proto/ --go_out=plugins=grpc:proto proto/ytb-be.proto
+// protoc -I proto/backend --go_out=plugins=grpc:proto/backend proto/backend/backend.proto
 
 syntax = "proto3";
 
@@ -10,20 +10,20 @@ package backendpb;
 
 service YtbBackend {
     // Submit a song to the backend service to be added to the play queue
-    rpc SubmitSong(SubmitMessage) returns (ErrorMessage) {}
+    rpc SubmitSong(Submission) returns (Error) {}
 
     // Get the songs in the queue
-    rpc GetPlaylist(Empty) returns (PlaylistMessage) {}
+    rpc GetPlaylist(Empty) returns (Playlist) {}
 
     // Save the playlist to the given file
-    rpc SavePlaylist(PathMessage) returns (ErrorMessage) {}
+    rpc SavePlaylist(FilePath) returns (Error) {}
 }
 
 // Empty message
 message Empty {}
 
 // Contains error number and message
-message ErrorMessage {
+message Error {
     // success flag
     bool success = 1;
 
@@ -32,7 +32,7 @@ message ErrorMessage {
 }
 
 // Data needed to submit a song to the backend service
-message SubmitMessage {
+message Submission {
     // Service link to the song (YouTube, Spotify, etc)
     string link = 1;
 
@@ -46,7 +46,7 @@ enum ServiceType {
 }
 
 // A song in the queue
-message SongMessage {
+message Song {
     // title of the song
     string title = 1;
 
@@ -67,11 +67,11 @@ message SongMessage {
 }
 
 // Playlist message
-message PlaylistMessage {
-    repeated SongMessage songs = 1;
+message Playlist {
+    repeated Song songs = 1;
 }
 
 // Contains a file path
-message PathMessage {
+message FilePath {
     string path = 1;
 }

@@ -7,12 +7,14 @@ package scheduler
 import (
 	"container/list"
 	"sync"
+
+	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
 /*
  * Data for the currently playing song
  */
-var nowPlaying *SongData = nil
+var nowPlaying *pb.Song = nil
 
 /*
  * Contains the state data for the queue
@@ -25,7 +27,7 @@ type FifoQueue struct {
 /*
  * Adds a song to the queue
  */
-func (fifo *FifoQueue) AddSong(song *SongData) {
+func (fifo *FifoQueue) AddSong(song *pb.Song) {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 	fifo.playQueue.PushBack(song)
@@ -51,40 +53,40 @@ func (fifo *FifoQueue) Len() int {
 /*
  * Returns the data for the currently playing song
  */
-func (fifo *FifoQueue) NowPlaying() *SongData {
+func (fifo *FifoQueue) NowPlaying() *pb.Song {
 	return nowPlaying
 }
 
 /*
  * Returns a list of songs in the queue
  */
-func (fifo *FifoQueue) Playlist() PlaylistType {
-	var playlist PlaylistType = make(PlaylistType, fifo.playQueue.Len())
+func (fifo *FifoQueue) GetPlaylist() *pb.Playlist {
+	songs := make([]*pb.Song, fifo.playQueue.Len())
 	var idx int = 0
 
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
-		playlist[idx] = e.Value.(*SongData)
+		songs[idx] = e.Value.(*pb.Song)
 		idx++
 	}
 
-	return playlist
+	return &pb.Playlist{Songs: songs}
 }
 
 /*
  * Pops the next song off the queue and returns it
  */
-func (fifo *FifoQueue) PopSong() *SongData {
-	var front *SongData = nil
+func (fifo *FifoQueue) PopSong() *pb.Song {
+	var front *pb.Song = nil
 	nowPlaying = nil
 
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 
 	if fifo.playQueue.Len() > 0 {
-		front = fifo.playQueue.Remove(fifo.playQueue.Front()).(*SongData)
+		front = fifo.playQueue.Remove(fifo.playQueue.Front()).(*pb.Song)
 		nowPlaying = front
 	}
 
@@ -101,7 +103,7 @@ func (fifo *FifoQueue) RemoveSong(serviceId string, userId uint32) bool {
 	defer fifo.lock.Unlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
-		var song *SongData = e.Value.(*SongData)
+		var song *pb.Song = e.Value.(*pb.Song)
 
 		if song.ServiceId == serviceId && song.UserId == userId {
 			fifo.playQueue.Remove(e)

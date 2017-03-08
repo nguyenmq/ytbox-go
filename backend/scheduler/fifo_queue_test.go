@@ -2,23 +2,25 @@ package scheduler
 
 import (
 	"testing"
+
+	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
 /*
  * List of sample song data to test against
  */
-var sampleSongs = []SongData{
-	{"title 1", 1, ServiceYoutube, "0xdeadbeef", "Kid A", 1},
-	{"title 2", 2, ServiceYoutube, "0xba5eba11", "Kid B", 2},
-	{"title 3", 3, ServiceYoutube, "0xf01dab1e", "Kid A", 1},
-	{"title 4", 4, ServiceYoutube, "0xb01dface", "Kid B", 2},
-	{"title 5", 5, ServiceYoutube, "0xca55e77e", "Kid A", 1},
+var sampleSongs = []pb.Song{
+	{"title 1", 1, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xdeadbeef"},
+	{"title 2", 2, "Kid B", 2, pb.ServiceType_ServiceYoutube, "0xba5eba11"},
+	{"title 3", 3, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xf01dab1e"},
+	{"title 4", 4, "Kid B", 2, pb.ServiceType_ServiceYoutube, "0xb01dface"},
+	{"title 5", 5, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xca55e77e"},
 }
 
 /*
  * Compares two songs and returns true if they are the same
  */
-func compareSongs(first *SongData, second *SongData) bool {
+func compareSongs(first *pb.Song, second *pb.Song) bool {
 	var same bool = false
 	same = (first.Title == second.Title)
 	same = (first.ServiceId == second.ServiceId) && same
@@ -36,7 +38,7 @@ func TestEmptyQueue(t *testing.T) {
 	var fifo FifoQueue
 	fifo.Init()
 
-	var nextSong *SongData = fifo.PopSong()
+	var nextSong *pb.Song = fifo.PopSong()
 	if nextSong != nil {
 		t.Error("Expected nil, but got", nextSong)
 	}
@@ -51,7 +53,7 @@ func TestOneQueue(t *testing.T) {
 
 	fifo.AddSong(&sampleSongs[0])
 
-	var nextSong *SongData = fifo.PopSong()
+	var nextSong *pb.Song = fifo.PopSong()
 	if nextSong == nil {
 		t.Error("Expected a song but got nil")
 	} else if compareSongs(nextSong, &sampleSongs[0]) == false {
@@ -69,7 +71,7 @@ func TestOneQueue(t *testing.T) {
  */
 func TestManyQueue(t *testing.T) {
 	var fifo FifoQueue
-	var nextSong *SongData
+	var nextSong *pb.Song
 	fifo.Init()
 
 	for i := 0; i < len(sampleSongs); i++ {

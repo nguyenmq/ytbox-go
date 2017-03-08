@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 
 	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
-	pb "github.com/nguyenmq/ytbox-go/proto"
+	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
 const (
@@ -69,12 +69,12 @@ func (s *YtbBackendServer) Serve() {
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SubmitMessage) (*pb.ErrorMessage, error) {
-	var response *pb.ErrorMessage = new(pb.ErrorMessage)
+func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
+	var response *pb.Error = new(pb.Error)
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
 	song, err := fetchSongData(sub.Link, sub.UserId)
-	log.Printf("Song data: %v", song)
+	log.Printf("Song data: { %v}", song)
 
 	if err != nil {
 		response.Success = false
@@ -88,25 +88,9 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.SubmitMessage
 	return response, nil
 }
 
-func (s *YtbBackendServer) createPlaylistMessage() *pb.PlaylistMessage {
-	playlist := s.queue.Playlist()
-	len := s.queue.Len()
-	songs := make([]*pb.SongMessage, len)
-
-	for i := 0; i < len; i++ {
-		songs[i] = &pb.SongMessage{
-			Title:     playlist[i].Title,
-			SongId:    playlist[i].SongId,
-			Username:  playlist[i].Username,
-			UserId:    playlist[i].UserId,
-			Service:   playlist[i].Service,
-			ServiceId: playlist[i].ServiceId,
-		}
-	}
-
-	return &pb.PlaylistMessage{Songs: songs}
-}
-
+/*
+ * Load a playlist from a serialized protobuf file
+ */
 func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 	var in []byte
 	var err error
@@ -117,7 +101,7 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 		return
 	}
 
-	playlist := &pb.PlaylistMessage{}
+	playlist := &pb.Playlist{}
 	err = proto.Unmarshal(in, playlist)
 	if err != nil {
 		log.Printf("Failed to parse playlist file: %v", err)
@@ -126,7 +110,7 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 
 	log.Printf("Loading songs from file \"%s\":", file)
 	for i := 0; i < len(playlist.Songs); i++ {
-		song := &sched.SongData{
+		song := &pb.Song{
 			Title:     playlist.Songs[i].Title,
 			SongId:    playlist.Songs[i].SongId,
 			Username:  playlist.Songs[i].Username,
@@ -142,20 +126,20 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 /*
  * Returns the songs in the queue back to the requesting client
  */
-func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.PlaylistMessage, error) {
-	return s.createPlaylistMessage(), nil
+func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Playlist, error) {
+	return s.queue.GetPlaylist(), nil
 }
 
 /*
  * Saves the current playlist to the given file location
  */
-func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.PathMessage) (*pb.ErrorMessage, error) {
-	response := &pb.ErrorMessage{Success: false}
-	playlist := s.createPlaylistMessage()
+func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
+	response := &pb.Error{Success: false}
+	playlist := s.queue.GetPlaylist()
 
 	out, err := proto.Marshal(playlist)
 	if err != nil {
-		log.Printf("Failed to encode PlaylistMessage with error: %v", err)
+		log.Printf("Failed to encode Playlist with error: %v", err)
 		response.Message = err.Error()
 		return response, nil
 	}

@@ -2,3 +2,4 @@ logs
 *.vim
 *.pb.go
 notes.md
+*.pls

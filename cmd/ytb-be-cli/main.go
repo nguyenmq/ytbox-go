@@ -9,7 +9,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/nguyenmq/ytbox-go/common"
-	pb "github.com/nguyenmq/ytbox-go/proto"
+	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
 const (
@@ -59,7 +59,7 @@ func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
  * Handler to submit a song to the remote server
  */
 func submitCommand(client pb.YtbBackendClient) {
-	response, err := client.SubmitSong(context.Background(), &pb.SubmitMessage{*submitLink, *submitUser})
+	response, err := client.SubmitSong(context.Background(), &pb.Submission{*submitLink, *submitUser})
 	if err != nil {
 		fmt.Printf("failed to call SubmitSong: %v\n", err)
 		os.Exit(1)
@@ -85,7 +85,7 @@ func playlistCommand(client pb.YtbBackendClient) {
 }
 
 func saveCommand(client pb.YtbBackendClient) {
-	response, err := client.SavePlaylist(context.Background(), &pb.PathMessage{Path: *saveFile})
+	response, err := client.SavePlaylist(context.Background(), &pb.FilePath{Path: *saveFile})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
 		os.Exit(1)

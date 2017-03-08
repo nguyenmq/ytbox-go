@@ -10,15 +10,14 @@ import (
 	"os/exec"
 	"strings"
 
-	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
-	pb "github.com/nguyenmq/ytbox-go/proto"
+	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
 /*
  * Fetch song data for the given link. Currently only YouTube links are
  * supported.
  */
-func fetchSongData(link string, userId uint32) (*sched.SongData, error) {
+func fetchSongData(link string, userId uint32) (*pb.Song, error) {
 	out, err := exec.Command("youtube-dl", "-e", "--get-id", link).Output()
 
 	if err != nil {
@@ -32,12 +31,12 @@ func fetchSongData(link string, userId uint32) (*sched.SongData, error) {
 		return nil, errors.New("Failed to fetch song data")
 	}
 
-	var song *sched.SongData = &sched.SongData{
+	var song *pb.Song = &pb.Song{
 		Title:     parsed[0],
-		SongId:    0,
+		SongId:    1,
 		Service:   pb.ServiceType_ServiceYoutube,
 		ServiceId: parsed[1],
-		Username:  "",
+		Username:  "Kid A",
 		UserId:    userId,
 	}
 
