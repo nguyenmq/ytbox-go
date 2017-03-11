@@ -1,8 +1,8 @@
-package scheduler
-
 /*
  * This file describes the types and interfaces used by yt_box backend
  */
+
+package scheduler
 
 import (
 	pb "github.com/nguyenmq/ytbox-go/proto/backend"

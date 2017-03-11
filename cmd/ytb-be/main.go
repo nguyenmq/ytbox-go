@@ -21,6 +21,7 @@ var (
 	host     = app.Flag("host", "Address to listen on").Default("127.0.0.1").Short('h').String()
 	port     = app.Flag("port", "Port to listen on").Default("8000").Short('p').String()
 	loadFile = app.Flag("load", "Load a serialized protobuf playlist from a file").Short('l').ExistingFile()
+	dbFile   = app.Flag("database", "Path to database").Default("./ytbox.db").Short('d').String()
 )
 
 func main() {
@@ -30,6 +31,6 @@ func main() {
 	logFile := common.InitLogger(backend.LogPrefix, true)
 	defer logFile.Close()
 
-	ytbServer := backend.NewServer(*host+":"+*port, *loadFile)
+	ytbServer := backend.NewServer(*host+":"+*port, *loadFile, *dbFile)
 	ytbServer.Serve()
 }

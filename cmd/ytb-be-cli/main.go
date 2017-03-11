@@ -19,9 +19,9 @@ const (
  * Command line arguments
  */
 var (
-	app        = kingpin.New(prefix, "Command line client to ytb-be")
-	remoteHost = app.Flag("host", "Address of remote ytb-be service").Default("127.0.0.1").Short('h').String()
-	remotePort = app.Flag("port", "Port of remote ytb-be service").Default("8000").Short('p').String()
+	app        = kingpin.New(prefix, "Command line client to ytb-be.")
+	remoteHost = app.Flag("host", "Address of remote ytb-be service.").Default("127.0.0.1").Short('h').String()
+	remotePort = app.Flag("port", "Port of remote ytb-be service.").Default("8000").Short('p').String()
 
 	// "submit" subcommand
 	submit     = app.Command("submit", "Submit a link to the queue.")
@@ -29,14 +29,19 @@ var (
 	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
 
 	// "playlist" subcommand
-	playlist = app.Command("playlist", "Get current songs in the playlist")
+	playlist = app.Command("playlist", "Get current songs in the playlist.")
 
 	// "save" subcommand
-	save     = app.Command("save", "Save the current playlist to a file")
+	save     = app.Command("save", "Save the current playlist to a file.")
 	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
 
 	// "pop" subcommand
 	pop = app.Command("pop", "Pop a song off the top of the queue.")
+
+	// "login" subcommand
+	login     = app.Command("login", "Login as the given username.")
+	loginName = login.Arg("username", "Alias to login as.").Required().String()
+	loginId   = login.Arg("userId", "Id of the alias to login as.").Uint32()
 )
 
 /*
@@ -109,6 +114,20 @@ func popCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Popped song: { %v}\n", song)
 }
 
+func loginCommand(client pb.YtbBackendClient) {
+	user, err := client.LoginUser(context.Background(), &pb.User{Username: *loginName, UserId: *loginId})
+	if err != nil {
+		fmt.Printf("failed to call LoginUser: %v\n", err)
+		os.Exit(1)
+	}
+
+	if user.UserId == 0 {
+		fmt.Println("Failed to login")
+	} else {
+		fmt.Printf("Logged in as: { %v}\n", user)
+	}
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -128,5 +147,8 @@ func main() {
 
 	case pop.FullCommand():
 		popCommand(client)
+
+	case login.FullCommand():
+		loginCommand(client)
 	}
 }

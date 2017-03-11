@@ -20,6 +20,11 @@ service YtbBackend {
 
     // Pop a song off the head of the queue
     rpc PopQueue(Empty) returns (Song) {}
+
+    // Login the given user. If a user with the given id doesn't exist, then a
+    // new one with the given name will be created. A successful call will
+    // return the user will an id greater than 0.
+    rpc LoginUser(User) returns (User) {}
 }
 
 // Empty message
@@ -77,4 +82,10 @@ message Playlist {
 // Contains a file path
 message FilePath {
     string path = 1;
+}
+
+// Login the user with the given name and id
+message User {
+    string username = 1;
+    uint32 userId = 2;
 }

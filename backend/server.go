@@ -5,6 +5,7 @@
 package backend
 
 import (
+	"database/sql"
 	"io/ioutil"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 
 	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
+	db "github.com/nguyenmq/ytbox-go/database"
 	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
@@ -28,12 +30,13 @@ type YtbBackendServer struct {
 	listener   net.Listener         // network listener
 	grpcServer *grpc.Server         // grpc server
 	queue      sched.QueueScheduler // playlist queue
+	dbManager  db.DbManager         // database manager
 }
 
 /*
  * Create a new yt_box backend server
  */
-func NewServer(addr string, loadFile string) *YtbBackendServer {
+func NewServer(addr string, loadFile string, dbPath string) *YtbBackendServer {
 	var err error
 
 	// initialize the backend server struct
@@ -50,6 +53,10 @@ func NewServer(addr string, loadFile string) *YtbBackendServer {
 	// initialize the song queue
 	server.queue = new(sched.FifoQueue)
 	server.queue.Init()
+
+	// initialize the database manager
+	server.dbManager = new(db.SqliteManager)
+	server.dbManager.Init(dbPath)
 
 	// load a snapshot playlist if provided
 	if loadFile != "" {
@@ -92,10 +99,7 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (
  * Load a playlist from a serialized protobuf file
  */
 func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
-	var in []byte
-	var err error
-
-	in, err = ioutil.ReadFile(file)
+	in, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Printf("Error reading file: %s", file)
 		return
@@ -128,6 +132,43 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
  */
 func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Playlist, error) {
 	return s.queue.GetPlaylist(), nil
+}
+
+/*
+ * Login the given user. If the userId is zero, then a new user needs to be
+ * created. A successful call will echo the username and return a userId
+ * greater than zero. An id of zero indicates an error occurred and the user
+ * will not be considered to be logged in. An a user already exists with the
+ * given id, but with a different name, then the new name shall be applied to
+ * the database.
+ */
+func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.User, error) {
+	userData, err := s.dbManager.GetUserById(user.UserId)
+
+	if userData == nil {
+		// Something happened if user data is nil
+
+		if err == sql.ErrNoRows {
+			// if no results were returned, then create a new user
+			userData, err = s.dbManager.AddUser(user.Username)
+			if err != nil {
+				log.Printf("Failed to add user: %s", user.Username)
+				return &pb.User{Username: user.Username, UserId: 0}, nil
+			}
+		} else {
+			// else return an error to the rpc client
+			return &pb.User{Username: user.Username, UserId: 0}, nil
+		}
+	} else if userData.User.Username != user.Username {
+		// Update the username in the database if the names differ
+		err = s.dbManager.UpdateUsername(user.Username, user.UserId)
+		if err != nil {
+			log.Println("Could not update username")
+			return &pb.User{Username: user.Username, UserId: 0}, nil
+		}
+	}
+
+	return &pb.User{Username: user.Username, UserId: userData.User.UserId}, nil
 }
 
 /*
