@@ -257,17 +257,14 @@ func (s *BackendServer) getUsernameFromId(userId uint32) string {
  * eviction must match the id of the user who submitted the song.
  */
 func (s *BackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (*pb.Error, error) {
-	response := &pb.Error{Success: false}
 	err := s.queue.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
 
 	if err != nil {
 		log.Printf("Failed to remove song from playlist: %v", err)
-		response.Message = err.Error()
-		return response, nil
+		return &pb.Error{Success: false, Message: err.Error()}, nil
 	} else {
 		log.Printf("Removed song: {song id: %d, user id: %d}", eviction.GetSongId(), eviction.GetUserId())
-		response.Message = "Success"
-		return response, nil
+		return &pb.Error{Success: true, Message: "Success"}, nil
 	}
 }
 

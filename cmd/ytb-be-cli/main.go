@@ -38,7 +38,7 @@ var (
 	pop = app.Command("pop", "Pop a song off the top of the queue.")
 
 	// "remove" subcommand
-	remove     = app.Command("remove", "Remove a song from the playlist.")
+	remove     = app.Command("remove", "Remove a song from the playlist.").Alias("rm")
 	removeSong = remove.Arg("songId", "Id of the song to remove.").Required().Uint32()
 	removeUser = remove.Arg("userId", "Id of the user who subitted the song.").Required().Uint32()
 
@@ -80,7 +80,7 @@ func submitCommand(client pb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
+	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
 }
 
 /*
@@ -110,7 +110,7 @@ func saveCommand(client pb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
+	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
 }
 
 func popCommand(client pb.YtbBackendClient) {
@@ -144,7 +144,7 @@ func removeCommand(client pb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
+	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
 }
 
 func nowCommand(client pb.YtbBackendClient) {
