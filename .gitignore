@@ -3,3 +3,4 @@ logs
 *.pb.go
 notes.md
 *.pls
+bin/*

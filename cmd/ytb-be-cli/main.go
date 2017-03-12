@@ -23,8 +23,8 @@ var (
 	remoteHost = app.Flag("host", "Address of remote ytb-be service.").Default("127.0.0.1").Short('h').String()
 	remotePort = app.Flag("port", "Port of remote ytb-be service.").Default("8000").Short('p').String()
 
-	// "list" subcommand
-	list = app.Command("list", "Get current songs in the playlist.")
+	// "playlist" subcommand
+	playlist = app.Command("playlist", "Get current songs in the playlist.").Alias("ls")
 
 	// "login" subcommand
 	login     = app.Command("login", "Login as the given username.")
@@ -47,7 +47,7 @@ var (
 	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
 
 	// "submit" subcommand
-	submit     = app.Command("submit", "Submit a link to the queue.")
+	submit     = app.Command("submit", "Submit a link to the queue.").Alias("sub")
 	submitLink = submit.Arg("link", "Link to song.").Required().String()
 	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
 )
@@ -86,7 +86,7 @@ func submitCommand(client pb.YtbBackendClient) {
 /*
  * Handler to list the songs in the playlist
  */
-func listCommand(client pb.YtbBackendClient) {
+func playlistCommand(client pb.YtbBackendClient) {
 	playlist, err := client.GetPlaylist(context.Background(), &pb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
@@ -175,8 +175,8 @@ func main() {
 	case submit.FullCommand():
 		submitCommand(client)
 
-	case list.FullCommand():
-		listCommand(client)
+	case playlist.FullCommand():
+		playlistCommand(client)
 
 	case save.FullCommand():
 		saveCommand(client)
