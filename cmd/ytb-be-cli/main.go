@@ -29,7 +29,7 @@ var (
 	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
 
 	// "playlist" subcommand
-	playlist = app.Command("playlist", "Get current songs in the playlist.")
+	list = app.Command("list", "Get current songs in the playlist.")
 
 	// "save" subcommand
 	save     = app.Command("save", "Save the current playlist to a file.")
@@ -78,7 +78,7 @@ func submitCommand(client pb.YtbBackendClient) {
 /*
  * Handler to list the songs in the playlist
  */
-func playlistCommand(client pb.YtbBackendClient) {
+func listCommand(client pb.YtbBackendClient) {
 	playlist, err := client.GetPlaylist(context.Background(), &pb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
@@ -139,8 +139,8 @@ func main() {
 	case submit.FullCommand():
 		submitCommand(client)
 
-	case playlist.FullCommand():
-		playlistCommand(client)
+	case list.FullCommand():
+		listCommand(client)
 
 	case save.FullCommand():
 		saveCommand(client)

@@ -49,8 +49,9 @@ message Submission {
 }
 
 enum ServiceType {
-    ServiceYoutube = 0;
-    ServiceSpotify = 1;
+    ServiceNone    = 0;
+    ServiceYoutube = 1;
+    ServiceSpotify = 2;
 }
 
 // A song in the queue

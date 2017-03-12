@@ -31,6 +31,7 @@ type YtbBackendServer struct {
 	grpcServer *grpc.Server         // grpc server
 	queue      sched.QueueScheduler // playlist queue
 	dbManager  db.DbManager         // database manager
+	identCache map[uint32]string    // user identity cache
 }
 
 /*
@@ -58,6 +59,9 @@ func NewServer(addr string, loadFile string, dbPath string) *YtbBackendServer {
 	server.dbManager = new(db.SqliteManager)
 	server.dbManager.Init(dbPath)
 
+	// initialize the user identity cache
+	server.identCache = make(map[uint32]string)
+
 	// load a snapshot playlist if provided
 	if loadFile != "" {
 		server.loadPlaylistFromFile(loadFile)
@@ -78,19 +82,30 @@ func (s *YtbBackendServer) Serve() {
  */
 func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
 	var response *pb.Error = new(pb.Error)
+	response.Success = false
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
-	song, err := fetchSongData(sub.Link, sub.UserId)
-	log.Printf("Song data: { %v}", song)
+	song := new(pb.Song)
+	song.UserId = sub.GetUserId()
 
-	if err != nil {
-		response.Success = false
-		response.Message = err.Error()
-	} else {
-		response.Success = true
-		response.Message = "Success"
-		s.queue.AddSong(song)
+	song.Username = s.getUsernameFromId(song.UserId)
+	if song.Username == "" {
+		response.Message = "Song submitted by unknown user"
+		log.Printf(response.Message)
+		return response, nil
 	}
+
+	err := fetchSongData(sub.Link, song)
+	if err != nil {
+		response.Message = err.Error()
+		return response, nil
+	}
+
+	response.Success = true
+	response.Message = "Success"
+	s.queue.AddSong(song)
+	s.dbManager.AddSong(song)
+	log.Printf("Song data: { %v}", song)
 
 	return response, nil
 }
@@ -168,6 +183,9 @@ func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.Us
 		}
 	}
 
+	// cache the user id and username
+	s.identCache[userData.User.UserId] = user.Username
+
 	return &pb.User{Username: user.Username, UserId: userData.User.UserId}, nil
 }
 
@@ -210,4 +228,33 @@ func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath)
 	response.Success = true
 	response.Message = "Success"
 	return response, nil
+}
+
+/*
+ * Returns the username associated with the user id. An empty string is
+ * returned if there was an error or the user id wasn't found.
+ */
+func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
+	if userId == 0 {
+		log.Println("User id of zero was passed into getUsernameFromId")
+		return ""
+	}
+
+	// check the user identities cache for the name
+	username, exists := s.identCache[userId]
+	if exists {
+		return username
+	}
+
+	// retrieve the name from the database if the user isn't in the cache
+	userData, err := s.dbManager.GetUserById(userId)
+	if err != nil {
+		log.Printf("Failed to get username from database with id: %d", userId)
+		return ""
+	}
+
+	// Add the username to the cache and return the name we found in the
+	// database
+	s.identCache[userId] = userData.User.Username
+	return userData.User.Username
 }
