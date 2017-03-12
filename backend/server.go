@@ -32,7 +32,7 @@ type YtbBackendServer struct {
 	grpcServer *grpc.Server         // grpc server
 	queue      sched.QueueScheduler // playlist queue
 	dbManager  db.DbManager         // database manager
-	identCache map[uint32]string    // user identity cache
+	userCache  *UserCache           // user identity cache
 }
 
 /*
@@ -61,7 +61,8 @@ func NewServer(addr string, loadFile string, dbPath string) *YtbBackendServer {
 	server.dbManager.Init(dbPath)
 
 	// initialize the user identity cache
-	server.identCache = make(map[uint32]string)
+	server.userCache = new(UserCache)
+	server.userCache.Init()
 
 	// load a snapshot playlist if provided
 	if loadFile != "" {
@@ -186,7 +187,7 @@ func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.Us
 	}
 
 	// cache the user id and username
-	s.identCache[userData.User.UserId] = user.Username
+	s.userCache.AddUserToCache(userData.User.UserId, user.Username)
 
 	return &pb.User{Username: user.Username, UserId: userData.User.UserId}, nil
 }
@@ -197,6 +198,7 @@ func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.Us
 func (s *YtbBackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song, error) {
 	if s.queue.Len() > 0 {
 		song := s.queue.PopQueue()
+		s.queue.SavePlaylist(queueSnapshot)
 		log.Printf("Popped song: { %v}", song)
 		return song, nil
 	}
@@ -233,7 +235,7 @@ func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
 	}
 
 	// check the user identities cache for the name
-	username, exists := s.identCache[userId]
+	username, exists := s.userCache.LookupUsername(userId)
 	if exists {
 		return username
 	}
@@ -247,6 +249,6 @@ func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
 
 	// Add the username to the cache and return the name we found in the
 	// database
-	s.identCache[userId] = userData.User.Username
+	s.userCache.AddUserToCache(userId, userData.User.Username)
 	return userData.User.Username
 }

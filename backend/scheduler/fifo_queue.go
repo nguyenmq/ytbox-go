@@ -25,7 +25,7 @@ var nowPlaying *pb.Song = nil
  */
 type FifoQueue struct {
 	playQueue *list.List
-	lock      *sync.Mutex
+	lock      *sync.RWMutex
 }
 
 /*
@@ -42,15 +42,15 @@ func (fifo *FifoQueue) AddSong(song *pb.Song) {
  */
 func (fifo *FifoQueue) Init() {
 	fifo.playQueue = list.New()
-	fifo.lock = new(sync.Mutex)
+	fifo.lock = new(sync.RWMutex)
 }
 
 /*
  * Returns the length of the queue
  */
 func (fifo *FifoQueue) Len() int {
-	fifo.lock.Lock()
-	defer fifo.lock.Unlock()
+	fifo.lock.RLock()
+	defer fifo.lock.RUnlock()
 	return fifo.playQueue.Len()
 }
 
@@ -68,8 +68,8 @@ func (fifo *FifoQueue) GetPlaylist() *pb.Playlist {
 	songs := make([]*pb.Song, fifo.playQueue.Len())
 	var idx int = 0
 
-	fifo.lock.Lock()
-	defer fifo.lock.Unlock()
+	fifo.lock.RLock()
+	defer fifo.lock.RUnlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
 		songs[idx] = e.Value.(*pb.Song)
