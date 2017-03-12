@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	LogPrefix string = "ytb-be" // logging prefix name
+	LogPrefix     string = "ytb-be"           // logging prefix name
+	queueSnapshot string = "/tmp/ytbox.queue" // location of the queue snapshot
 )
 
 /*
@@ -105,6 +106,7 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (
 	response.Message = "Success"
 	s.queue.AddSong(song)
 	s.dbManager.AddSong(song)
+	s.queue.SavePlaylist(queueSnapshot)
 	log.Printf("Song data: { %v}", song)
 
 	return response, nil
@@ -208,18 +210,8 @@ func (s *YtbBackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.S
  */
 func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
 	response := &pb.Error{Success: false}
-	playlist := s.queue.GetPlaylist()
-
-	out, err := proto.Marshal(playlist)
+	err := s.queue.SavePlaylist(fname.Path)
 	if err != nil {
-		log.Printf("Failed to encode Playlist with error: %v", err)
-		response.Message = err.Error()
-		return response, nil
-	}
-
-	err = ioutil.WriteFile(fname.Path, out, 0644)
-	if err != nil {
-		log.Printf("Failed to write playlist to file \"%s\" with error: %v", fname.Path, err)
 		response.Message = err.Error()
 		return response, nil
 	}

@@ -34,4 +34,7 @@ type QueueScheduler interface {
 
 	// Remove song from the queue
 	RemoveSong(serviceId string, userId uint32) bool
+
+	// Saves the playlist to a file
+	SavePlaylist(path string) error
 }

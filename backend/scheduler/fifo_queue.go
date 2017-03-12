@@ -6,7 +6,11 @@ package scheduler
 
 import (
 	"container/list"
+	"io/ioutil"
+	"log"
 	"sync"
+
+	"github.com/golang/protobuf/proto"
 
 	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
@@ -113,4 +117,25 @@ func (fifo *FifoQueue) RemoveSong(serviceId string, userId uint32) bool {
 	}
 
 	return found
+}
+
+/*
+ * Saves the playlist to a file
+ */
+func (fifo *FifoQueue) SavePlaylist(path string) error {
+	playlist := fifo.GetPlaylist()
+
+	out, err := proto.Marshal(playlist)
+	if err != nil {
+		log.Printf("Failed to encode Playlist with error: %v", err)
+		return err
+	}
+
+	err = ioutil.WriteFile(path, out, 0644)
+	if err != nil {
+		log.Printf("Failed to write playlist to file \"%s\" with error: %v", path, err)
+		return err
+	}
+
+	return nil
 }
