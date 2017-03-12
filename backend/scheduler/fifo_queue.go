@@ -26,8 +26,9 @@ var nowPlaying *pb.Song = nil
  * Contains the state data for the queue
  */
 type FifoQueue struct {
-	playQueue *list.List
-	lock      *sync.RWMutex
+	playQueue *list.List    // the playlist of songs
+	lock      *sync.RWMutex // read/write lock on the playlist
+	npLock    *sync.Mutex   // lock on the now playing value
 }
 
 /*
@@ -45,6 +46,7 @@ func (fifo *FifoQueue) AddSong(song *pb.Song) {
 func (fifo *FifoQueue) Init() {
 	fifo.playQueue = list.New()
 	fifo.lock = new(sync.RWMutex)
+	fifo.npLock = new(sync.Mutex)
 }
 
 /*
@@ -60,6 +62,9 @@ func (fifo *FifoQueue) Len() int {
  * Returns the data for the currently playing song
  */
 func (fifo *FifoQueue) NowPlaying() *pb.Song {
+	fifo.npLock.Lock()
+	defer fifo.npLock.Unlock()
+
 	return nowPlaying
 }
 
@@ -86,6 +91,9 @@ func (fifo *FifoQueue) GetPlaylist() *pb.Playlist {
  */
 func (fifo *FifoQueue) PopQueue() *pb.Song {
 	var front *pb.Song = nil
+
+	fifo.npLock.Lock()
+	defer fifo.npLock.Unlock()
 	nowPlaying = nil
 
 	fifo.lock.Lock()
@@ -93,6 +101,7 @@ func (fifo *FifoQueue) PopQueue() *pb.Song {
 
 	if fifo.playQueue.Len() > 0 {
 		front = fifo.playQueue.Remove(fifo.playQueue.Front()).(*pb.Song)
+
 		nowPlaying = front
 	}
 

@@ -23,30 +23,33 @@ var (
 	remoteHost = app.Flag("host", "Address of remote ytb-be service.").Default("127.0.0.1").Short('h').String()
 	remotePort = app.Flag("port", "Port of remote ytb-be service.").Default("8000").Short('p').String()
 
-	// "submit" subcommand
-	submit     = app.Command("submit", "Submit a link to the queue.")
-	submitLink = submit.Arg("link", "Link to song.").Required().String()
-	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
-
-	// "playlist" subcommand
+	// "list" subcommand
 	list = app.Command("list", "Get current songs in the playlist.")
-
-	// "save" subcommand
-	save     = app.Command("save", "Save the current playlist to a file.")
-	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
-
-	// "pop" subcommand
-	pop = app.Command("pop", "Pop a song off the top of the queue.")
 
 	// "login" subcommand
 	login     = app.Command("login", "Login as the given username.")
 	loginName = login.Arg("username", "Alias to login as.").Required().String()
 	loginId   = login.Arg("userId", "Id of the alias to login as.").Uint32()
 
+	// "now" subcommand
+	now = app.Command("now", "Get the current song that is playing.").Default()
+
+	// "pop" subcommand
+	pop = app.Command("pop", "Pop a song off the top of the queue.")
+
 	// "remove" subcommand
 	remove     = app.Command("remove", "Remove a song from the playlist.")
 	removeSong = remove.Arg("songId", "Id of the song to remove.").Required().Uint32()
 	removeUser = remove.Arg("userId", "Id of the user who subitted the song.").Required().Uint32()
+
+	// "save" subcommand
+	save     = app.Command("save", "Save the current playlist to a file.")
+	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
+
+	// "submit" subcommand
+	submit     = app.Command("submit", "Submit a link to the queue.")
+	submitLink = submit.Arg("link", "Link to song.").Required().String()
+	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
 )
 
 /*
@@ -144,6 +147,20 @@ func removeCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
 }
 
+func nowCommand(client pb.YtbBackendClient) {
+	song, err := client.GetNowPlaying(context.Background(), &pb.Empty{})
+	if err != nil {
+		fmt.Printf("failed to call GetNowPlaying: %v\n", err)
+		os.Exit(1)
+	}
+
+	if song.SongId == 0 {
+		fmt.Println("No song is currently playing")
+	} else {
+		fmt.Printf("Now playing: { %v}\n", song)
+	}
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -152,6 +169,9 @@ func main() {
 	defer conn.Close()
 
 	switch parsed {
+	case now.FullCommand():
+		nowCommand(client)
+
 	case submit.FullCommand():
 		submitCommand(client)
 
@@ -169,5 +189,8 @@ func main() {
 
 	case remove.FullCommand():
 		removeCommand(client)
+
+	default:
+		nowCommand(client)
 	}
 }

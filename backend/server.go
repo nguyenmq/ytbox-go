@@ -27,7 +27,7 @@ const (
 /*
  * Implements the backend rpc server interface
  */
-type YtbBackendServer struct {
+type BackendServer struct {
 	listener   net.Listener         // network listener
 	grpcServer *grpc.Server         // grpc server
 	queue      sched.QueueScheduler // playlist queue
@@ -38,11 +38,11 @@ type YtbBackendServer struct {
 /*
  * Create a new yt_box backend server
  */
-func NewServer(addr string, loadFile string, dbPath string) *YtbBackendServer {
+func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 	var err error
 
 	// initialize the backend server struct
-	server := new(YtbBackendServer)
+	server := new(BackendServer)
 	server.listener, err = net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s with error: %v", addr, err)
@@ -75,14 +75,14 @@ func NewServer(addr string, loadFile string, dbPath string) *YtbBackendServer {
 /*
  * Start the server
  */
-func (s *YtbBackendServer) Serve() {
+func (s *BackendServer) Serve() {
 	s.grpcServer.Serve(s.listener)
 }
 
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
+func (s *BackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
 	response := &pb.Error{Success: false}
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
@@ -115,7 +115,7 @@ func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (
 /*
  * Load a playlist from a serialized protobuf file
  */
-func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
+func (s *BackendServer) loadPlaylistFromFile(file string) {
 	in, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Printf("Error reading file: %s", file)
@@ -147,7 +147,7 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 /*
  * Returns the songs in the queue back to the requesting client
  */
-func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Playlist, error) {
+func (s *BackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Playlist, error) {
 	return s.queue.GetPlaylist(), nil
 }
 
@@ -159,7 +159,7 @@ func (s *YtbBackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.
  * given id, but with a different name, then the new name shall be applied to
  * the database.
  */
-func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.User, error) {
+func (s *BackendServer) LoginUser(con context.Context, user *pb.User) (*pb.User, error) {
 	userData, err := s.dbManager.GetUserById(user.UserId)
 
 	if userData == nil {
@@ -194,7 +194,7 @@ func (s *YtbBackendServer) LoginUser(con context.Context, user *pb.User) (*pb.Us
 /*
  * Pops a song off the top of the queue and returns it
  */
-func (s *YtbBackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song, error) {
+func (s *BackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song, error) {
 	if s.queue.Len() > 0 {
 		song := s.queue.PopQueue()
 		s.queue.SavePlaylist(queueSnapshot)
@@ -209,7 +209,7 @@ func (s *YtbBackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.S
 /*
  * Saves the current playlist to the given file location
  */
-func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
+func (s *BackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
 	response := &pb.Error{Success: false}
 	err := s.queue.SavePlaylist(fname.Path)
 	if err != nil {
@@ -227,7 +227,7 @@ func (s *YtbBackendServer) SavePlaylist(con context.Context, fname *pb.FilePath)
  * Returns the username associated with the user id. An empty string is
  * returned if there was an error or the user id wasn't found.
  */
-func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
+func (s *BackendServer) getUsernameFromId(userId uint32) string {
 	if userId == 0 {
 		log.Println("User id of zero was passed into getUsernameFromId")
 		return ""
@@ -256,7 +256,7 @@ func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
  * Removes the given song from the playlist. The user identified by the song
  * eviction must match the id of the user who submitted the song.
  */
-func (s *YtbBackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (*pb.Error, error) {
+func (s *BackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (*pb.Error, error) {
 	response := &pb.Error{Success: false}
 	err := s.queue.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
 
@@ -269,4 +269,18 @@ func (s *YtbBackendServer) RemoveSong(con context.Context, eviction *pb.Eviction
 		response.Message = "Success"
 		return response, nil
 	}
+}
+
+/*
+ * Returns the song that should be considered "now playing". If there isn't a
+ * current song, then an empty Song struct is returned.
+ */
+func (s *BackendServer) GetNowPlaying(con context.Context, empty *pb.Empty) (*pb.Song, error) {
+	nowPlaying := s.queue.NowPlaying()
+
+	if nowPlaying == nil {
+		return &pb.Song{}, nil
+	}
+
+	return nowPlaying, nil
 }

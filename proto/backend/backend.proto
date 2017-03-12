@@ -15,6 +15,9 @@ service YtbBackend {
     // Remove a song from the playlist
     rpc RemoveSong(Eviction) returns (Error) {}
 
+    // Get the "now playing" song
+    rpc GetNowPlaying(Empty) returns (Song) {}
+
     // Get the songs in the queue
     rpc GetPlaylist(Empty) returns (Playlist) {}
 
