@@ -33,7 +33,7 @@ type QueueScheduler interface {
 	PopQueue() *pb.Song
 
 	// Remove song from the queue
-	RemoveSong(serviceId string, userId uint32) bool
+	RemoveSong(songId uint32, userId uint32) error
 
 	// Saves the playlist to a file
 	SavePlaylist(path string) error

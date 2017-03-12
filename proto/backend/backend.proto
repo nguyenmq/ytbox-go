@@ -12,6 +12,9 @@ service YtbBackend {
     // Submit a song to the backend service to be added to the play queue
     rpc SubmitSong(Submission) returns (Error) {}
 
+    // Remove a song from the playlist
+    rpc RemoveSong(Eviction) returns (Error) {}
+
     // Get the songs in the queue
     rpc GetPlaylist(Empty) returns (Playlist) {}
 
@@ -87,6 +90,18 @@ message FilePath {
 
 // Login the user with the given name and id
 message User {
+    // the user's name
     string username = 1;
+
+    // the user's id
+    uint32 userId = 2;
+}
+
+// A song eviction
+message Eviction {
+    // id of song to evict
+    uint32 songId = 1;
+
+    // id of the user who submitted the song
     uint32 userId = 2;
 }

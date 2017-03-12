@@ -42,6 +42,11 @@ var (
 	login     = app.Command("login", "Login as the given username.")
 	loginName = login.Arg("username", "Alias to login as.").Required().String()
 	loginId   = login.Arg("userId", "Id of the alias to login as.").Uint32()
+
+	// "remove" subcommand
+	remove     = app.Command("remove", "Remove a song from the playlist.")
+	removeSong = remove.Arg("songId", "Id of the song to remove.").Required().Uint32()
+	removeUser = remove.Arg("userId", "Id of the user who subitted the song.").Required().Uint32()
 )
 
 /*
@@ -87,7 +92,8 @@ func listCommand(client pb.YtbBackendClient) {
 
 	fmt.Println("Songs in the playlist:\n")
 	for i := 0; i < len(playlist.Songs); i++ {
-		fmt.Printf("%3d. { id: %2d, title: %s }\n", i+1, playlist.Songs[i].SongId, playlist.Songs[i].Title)
+		fmt.Printf("%3d. { id: %2d, user: %2d, title: %s }\n",
+			i+1, playlist.Songs[i].SongId, playlist.Songs[i].UserId, playlist.Songs[i].Title)
 	}
 }
 
@@ -128,6 +134,16 @@ func loginCommand(client pb.YtbBackendClient) {
 	}
 }
 
+func removeCommand(client pb.YtbBackendClient) {
+	response, err := client.RemoveSong(context.Background(), &pb.Eviction{SongId: *removeSong, UserId: *removeUser})
+	if err != nil {
+		fmt.Printf("failed to call RemoveSong: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Response: {flag: %t, message: %s}\n", response.Success, response.Message)
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -150,5 +166,8 @@ func main() {
 
 	case login.FullCommand():
 		loginCommand(client)
+
+	case remove.FullCommand():
+		removeCommand(client)
 	}
 }

@@ -83,8 +83,7 @@ func (s *YtbBackendServer) Serve() {
  * Receive a song from a remote client for appending to the play queue
  */
 func (s *YtbBackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
-	var response *pb.Error = new(pb.Error)
-	response.Success = false
+	response := &pb.Error{Success: false}
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
 	song := new(pb.Song)
@@ -141,7 +140,7 @@ func (s *YtbBackendServer) loadPlaylistFromFile(file string) {
 			ServiceId: playlist.Songs[i].ServiceId,
 		}
 		s.queue.AddSong(song)
-		log.Printf("%3d. %s", i+1, song.Title)
+		log.Printf("%3d. { %v}", i+1, song)
 	}
 }
 
@@ -251,4 +250,23 @@ func (s *YtbBackendServer) getUsernameFromId(userId uint32) string {
 	// database
 	s.userCache.AddUserToCache(userId, userData.User.Username)
 	return userData.User.Username
+}
+
+/*
+ * Removes the given song from the playlist. The user identified by the song
+ * eviction must match the id of the user who submitted the song.
+ */
+func (s *YtbBackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (*pb.Error, error) {
+	response := &pb.Error{Success: false}
+	err := s.queue.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
+
+	if err != nil {
+		log.Printf("Failed to remove song from playlist: %v", err)
+		response.Message = err.Error()
+		return response, nil
+	} else {
+		log.Printf("Removed song: {song id: %d, user id: %d}", eviction.GetSongId(), eviction.GetUserId())
+		response.Message = "Success"
+		return response, nil
+	}
 }

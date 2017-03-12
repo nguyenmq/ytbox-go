@@ -6,6 +6,8 @@ package scheduler
 
 import (
 	"container/list"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -98,25 +100,28 @@ func (fifo *FifoQueue) PopQueue() *pb.Song {
 }
 
 /*
- * Removes the identified song from the queue
+ * Removes the identified song from the queue. Both the song id and uesr id
+ * must match in order for the song to be successfully removed.
  */
-func (fifo *FifoQueue) RemoveSong(serviceId string, userId uint32) bool {
-	var found bool = false
-
+func (fifo *FifoQueue) RemoveSong(songId uint32, userId uint32) error {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
 		var song *pb.Song = e.Value.(*pb.Song)
 
-		if song.ServiceId == serviceId && song.UserId == userId {
-			fifo.playQueue.Remove(e)
-			found = true
-			break
+		if song.GetSongId() == songId {
+			if song.GetUserId() == userId {
+				fifo.playQueue.Remove(e)
+				return nil
+			} else {
+				return errors.New(fmt.Sprintf("The user id %d for song %d does not match the id of the submitter",
+					userId, songId))
+			}
 		}
 	}
 
-	return found
+	return errors.New(fmt.Sprintf("Song with id %d does not exist in the queue", songId))
 }
 
 /*
