@@ -71,6 +71,7 @@ func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
 }
 
 func main() {
+	var link string
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -83,10 +84,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	link := fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
-	err = exec.Command("mpv", "--fs", link).Run()
+	switch song.Service {
+	case pb.ServiceType_ServiceLocal:
+		link = song.ServiceId
 
-	if err != nil {
-		fmt.Printf("Failed to play link: %s\n", link)
+	case pb.ServiceType_ServiceYoutube:
+		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
+
+	default:
+		fmt.Printf("Unsupported link: %s\n", song.ServiceId)
+	}
+
+	if link != "" {
+		err = exec.Command("mpv", "--fs", link).Run()
+		if err != nil {
+			fmt.Printf("Failed to play link: %s\n", link)
+		}
 	}
 }

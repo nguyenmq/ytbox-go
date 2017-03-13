@@ -6,19 +6,42 @@ package backend
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
+	"github.com/dhowden/tag"
 	pb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
+
+var (
+	// match absolute paths to mp3 or flac files
+	validFile = regexp.MustCompile(`(^\/).*\.(mp3|flac)$`)
+
+	// match youtube links
+	validYt = regexp.MustCompile(`^(https?://)(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
+)
+
+func fetchSongData(link string, song *pb.Song) error {
+	if validYt.MatchString(link) {
+		return fetchYoutubeSongData(link, song)
+	} else if validFile.MatchString(link) {
+		return fetchLocalSongData(link, song)
+	} else {
+		err := errors.New(fmt.Sprintf("Unknown link submitted: %s", link))
+		return err
+	}
+}
 
 /*
  * Fetch song data for the given link. This includes the song title, service
  * id, and service type. Currently only YouTube links are supported. Populates
  * the Song structure with the song data it retrieves. Returns an error status.
  */
-func fetchSongData(link string, song *pb.Song) error {
+func fetchYoutubeSongData(link string, song *pb.Song) error {
 	out, err := exec.Command("youtube-dl", "-e", "--get-id", link).Output()
 
 	if err != nil {
@@ -35,6 +58,30 @@ func fetchSongData(link string, song *pb.Song) error {
 	song.Title = parsed[0]
 	song.ServiceId = parsed[1]
 	song.Service = pb.ServiceType_ServiceYoutube
+
+	return nil
+}
+
+/*
+ * Read the metadata out of a local mp3 or flac file
+ */
+func fetchLocalSongData(link string, song *pb.Song) error {
+	file, err := os.Open(link)
+	if err != nil {
+		log.Printf("Failed to read file %s: %v", link, err)
+		return err
+	}
+	defer file.Close()
+
+	tags, err := tag.ReadFrom(file)
+	if err != nil {
+		log.Printf("Failed to parse tags: %v", err)
+		return err
+	}
+
+	song.Title = fmt.Sprintf("%s - %s", tags.Artist(), tags.Title())
+	song.ServiceId = link
+	song.Service = pb.ServiceType_ServiceLocal
 
 	return nil
 }

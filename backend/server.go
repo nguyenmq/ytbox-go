@@ -99,6 +99,7 @@ func (s *BackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb
 	err := fetchSongData(sub.Link, song)
 	if err != nil {
 		response.Message = err.Error()
+		log.Println(err.Error())
 		return response, nil
 	}
 
