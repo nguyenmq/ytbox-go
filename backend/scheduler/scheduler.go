@@ -5,7 +5,8 @@
 package scheduler
 
 import (
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
@@ -15,7 +16,7 @@ import (
  */
 type QueueScheduler interface {
 	// Add a song to the queue
-	AddSong(song *pb.Song)
+	AddSong(song *cmpb.Song)
 
 	// Initialize the queue scheduler
 	Init()
@@ -24,13 +25,13 @@ type QueueScheduler interface {
 	Len() int
 
 	// Get the song that's now playing
-	NowPlaying() *pb.Song
+	NowPlaying() *cmpb.Song
 
 	// Get a list of the currents songs in the queue
-	GetPlaylist() *pb.Playlist
+	GetPlaylist() *bepb.Playlist
 
 	// Pop a song off the queue
-	PopQueue() *pb.Song
+	PopQueue() *cmpb.Song
 
 	// Remove song from the queue
 	RemoveSong(songId uint32, userId uint32) error

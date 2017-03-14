@@ -8,7 +8,8 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 const (
@@ -56,7 +57,7 @@ var (
  * Connect to the remote server. Remember to close the returned connect when
  * done.
  */
-func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
+func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
@@ -66,15 +67,15 @@ func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	client := pb.NewYtbBackendClient(conn)
+	client := bepb.NewYtbBackendClient(conn)
 	return conn, client
 }
 
 /*
  * Handler to submit a song to the remote server
  */
-func submitCommand(client pb.YtbBackendClient) {
-	response, err := client.SubmitSong(context.Background(), &pb.Submission{*submitLink, *submitUser})
+func submitCommand(client bepb.YtbBackendClient) {
+	response, err := client.SubmitSong(context.Background(), &bepb.Submission{*submitLink, *submitUser})
 	if err != nil {
 		fmt.Printf("failed to call SubmitSong: %v\n", err)
 		os.Exit(1)
@@ -86,8 +87,8 @@ func submitCommand(client pb.YtbBackendClient) {
 /*
  * Handler to list the songs in the playlist
  */
-func playlistCommand(client pb.YtbBackendClient) {
-	playlist, err := client.GetPlaylist(context.Background(), &pb.Empty{})
+func playlistCommand(client bepb.YtbBackendClient) {
+	playlist, err := client.GetPlaylist(context.Background(), &cmpb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
 		os.Exit(1)
@@ -103,8 +104,8 @@ func playlistCommand(client pb.YtbBackendClient) {
 /*
  * Tell the backend server to save the current playlist to a file
  */
-func saveCommand(client pb.YtbBackendClient) {
-	response, err := client.SavePlaylist(context.Background(), &pb.FilePath{Path: *saveFile})
+func saveCommand(client bepb.YtbBackendClient) {
+	response, err := client.SavePlaylist(context.Background(), &bepb.FilePath{Path: *saveFile})
 	if err != nil {
 		fmt.Printf("failed to call GetPlaylist: %v\n", err)
 		os.Exit(1)
@@ -113,8 +114,8 @@ func saveCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
 }
 
-func popCommand(client pb.YtbBackendClient) {
-	song, err := client.PopQueue(context.Background(), &pb.Empty{})
+func popCommand(client bepb.YtbBackendClient) {
+	song, err := client.PopQueue(context.Background(), &cmpb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call PopQueue: %v\n", err)
 		os.Exit(1)
@@ -123,8 +124,8 @@ func popCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Popped song: { %v}\n", song)
 }
 
-func loginCommand(client pb.YtbBackendClient) {
-	user, err := client.LoginUser(context.Background(), &pb.User{Username: *loginName, UserId: *loginId})
+func loginCommand(client bepb.YtbBackendClient) {
+	user, err := client.LoginUser(context.Background(), &bepb.User{Username: *loginName, UserId: *loginId})
 	if err != nil {
 		fmt.Printf("failed to call LoginUser: %v\n", err)
 		os.Exit(1)
@@ -137,8 +138,8 @@ func loginCommand(client pb.YtbBackendClient) {
 	}
 }
 
-func removeCommand(client pb.YtbBackendClient) {
-	response, err := client.RemoveSong(context.Background(), &pb.Eviction{SongId: *removeSong, UserId: *removeUser})
+func removeCommand(client bepb.YtbBackendClient) {
+	response, err := client.RemoveSong(context.Background(), &bepb.Eviction{SongId: *removeSong, UserId: *removeUser})
 	if err != nil {
 		fmt.Printf("failed to call RemoveSong: %v\n", err)
 		os.Exit(1)
@@ -147,8 +148,8 @@ func removeCommand(client pb.YtbBackendClient) {
 	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
 }
 
-func nowCommand(client pb.YtbBackendClient) {
-	song, err := client.GetNowPlaying(context.Background(), &pb.Empty{})
+func nowCommand(client bepb.YtbBackendClient) {
+	song, err := client.GetNowPlaying(context.Background(), &cmpb.Empty{})
 	if err != nil {
 		fmt.Printf("failed to call GetNowPlaying: %v\n", err)
 		os.Exit(1)

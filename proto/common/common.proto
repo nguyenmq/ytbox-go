@@ -1,0 +1,41 @@
+// Defines the protobuf messsages and services used by the yt_box backend and
+// clients to the backend.
+//
+// Usage:
+// cd to project root
+// protoc --go_out=plugins=grpc:. github.com/nguyenmq/ytbox-go/proto/common/common.proto
+
+syntax = "proto3";
+
+package common_pb;
+
+// Empty message
+message Empty {}
+
+enum ServiceType {
+    ServiceNone    = 0;
+    ServiceYoutube = 1;
+    ServiceSpotify = 2;
+    ServiceLocal   = 3;
+}
+
+// A song in the queue
+message Song {
+    // title of the song
+    string title = 1;
+
+    // internal song id
+    uint32 songId = 2;
+
+    // name of user who submitted the song
+    string username = 3;
+
+    // id of user
+    uint32 userId = 4;
+
+    // id of service song belongs to
+    ServiceType service = 5;
+
+    // id specific to song's service
+    string serviceId = 6;
+}

@@ -14,13 +14,14 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
  * Data for the currently playing song
  */
-var nowPlaying *pb.Song = nil
+var nowPlaying *cmpb.Song = nil
 
 /*
  * Contains the state data for the queue
@@ -34,7 +35,7 @@ type FifoQueue struct {
 /*
  * Adds a song to the queue
  */
-func (fifo *FifoQueue) AddSong(song *pb.Song) {
+func (fifo *FifoQueue) AddSong(song *cmpb.Song) {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 	fifo.playQueue.PushBack(song)
@@ -61,7 +62,7 @@ func (fifo *FifoQueue) Len() int {
 /*
  * Returns the data for the currently playing song
  */
-func (fifo *FifoQueue) NowPlaying() *pb.Song {
+func (fifo *FifoQueue) NowPlaying() *cmpb.Song {
 	fifo.npLock.Lock()
 	defer fifo.npLock.Unlock()
 
@@ -71,26 +72,26 @@ func (fifo *FifoQueue) NowPlaying() *pb.Song {
 /*
  * Returns a list of songs in the queue
  */
-func (fifo *FifoQueue) GetPlaylist() *pb.Playlist {
-	songs := make([]*pb.Song, fifo.playQueue.Len())
+func (fifo *FifoQueue) GetPlaylist() *bepb.Playlist {
+	songs := make([]*cmpb.Song, fifo.playQueue.Len())
 	var idx int = 0
 
 	fifo.lock.RLock()
 	defer fifo.lock.RUnlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
-		songs[idx] = e.Value.(*pb.Song)
+		songs[idx] = e.Value.(*cmpb.Song)
 		idx++
 	}
 
-	return &pb.Playlist{Songs: songs}
+	return &bepb.Playlist{Songs: songs}
 }
 
 /*
  * Pops the next song off the queue and returns it
  */
-func (fifo *FifoQueue) PopQueue() *pb.Song {
-	var front *pb.Song = nil
+func (fifo *FifoQueue) PopQueue() *cmpb.Song {
+	var front *cmpb.Song = nil
 
 	fifo.npLock.Lock()
 	defer fifo.npLock.Unlock()
@@ -100,7 +101,7 @@ func (fifo *FifoQueue) PopQueue() *pb.Song {
 	defer fifo.lock.Unlock()
 
 	if fifo.playQueue.Len() > 0 {
-		front = fifo.playQueue.Remove(fifo.playQueue.Front()).(*pb.Song)
+		front = fifo.playQueue.Remove(fifo.playQueue.Front()).(*cmpb.Song)
 
 		nowPlaying = front
 	}
@@ -117,7 +118,7 @@ func (fifo *FifoQueue) RemoveSong(songId uint32, userId uint32) error {
 	defer fifo.lock.Unlock()
 
 	for e := fifo.playQueue.Front(); e != nil; e = e.Next() {
-		var song *pb.Song = e.Value.(*pb.Song)
+		var song *cmpb.Song = e.Value.(*cmpb.Song)
 
 		if song.GetSongId() == songId {
 			if song.GetUserId() == userId {

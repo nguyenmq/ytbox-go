@@ -6,6 +6,7 @@ package backend
 
 import (
 	"database/sql"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -16,7 +17,8 @@ import (
 
 	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
 	db "github.com/nguyenmq/ytbox-go/database"
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 const (
@@ -28,11 +30,11 @@ const (
  * Implements the backend rpc server interface
  */
 type BackendServer struct {
-	listener   net.Listener         // network listener
-	grpcServer *grpc.Server         // grpc server
-	queue      sched.QueueScheduler // playlist queue
-	dbManager  db.DbManager         // database manager
-	userCache  *UserCache           // user identity cache
+	listener  net.Listener         // network listener
+	beServer  *grpc.Server         // backend RPC server
+	queue     sched.QueueScheduler // playlist queue
+	dbManager db.DbManager         // database manager
+	userCache *UserCache           // user identity cache
 }
 
 /*
@@ -49,8 +51,9 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 	}
 
 	// initialize the rpc server
-	server.grpcServer = grpc.NewServer()
-	pb.RegisterYtbBackendServer(server.grpcServer, server)
+	server.beServer = grpc.NewServer()
+	bepb.RegisterYtbBackendServer(server.beServer, server)
+	bepb.RegisterYtbBePlayerServer(server.beServer, server)
 
 	// initialize the song queue
 	server.queue = new(sched.FifoQueue)
@@ -76,17 +79,17 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
  * Start the server
  */
 func (s *BackendServer) Serve() {
-	s.grpcServer.Serve(s.listener)
+	s.beServer.Serve(s.listener)
 }
 
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *BackendServer) SubmitSong(con context.Context, sub *pb.Submission) (*pb.Error, error) {
-	response := &pb.Error{Success: false}
+func (s *BackendServer) SubmitSong(con context.Context, sub *bepb.Submission) (*bepb.Error, error) {
+	response := &bepb.Error{Success: false}
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
-	song := new(pb.Song)
+	song := new(cmpb.Song)
 	song.UserId = sub.GetUserId()
 
 	song.Username = s.getUsernameFromId(song.UserId)
@@ -123,7 +126,7 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
 		return
 	}
 
-	playlist := &pb.Playlist{}
+	playlist := &bepb.Playlist{}
 	err = proto.Unmarshal(in, playlist)
 	if err != nil {
 		log.Printf("Failed to parse playlist file: %v", err)
@@ -132,7 +135,7 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
 
 	log.Printf("Loading songs from file \"%s\":", file)
 	for i := 0; i < len(playlist.Songs); i++ {
-		song := &pb.Song{
+		song := &cmpb.Song{
 			Title:     playlist.Songs[i].Title,
 			SongId:    playlist.Songs[i].SongId,
 			Username:  playlist.Songs[i].Username,
@@ -148,7 +151,7 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
 /*
  * Returns the songs in the queue back to the requesting client
  */
-func (s *BackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Playlist, error) {
+func (s *BackendServer) GetPlaylist(con context.Context, arg *cmpb.Empty) (*bepb.Playlist, error) {
 	return s.queue.GetPlaylist(), nil
 }
 
@@ -160,7 +163,7 @@ func (s *BackendServer) GetPlaylist(con context.Context, arg *pb.Empty) (*pb.Pla
  * given id, but with a different name, then the new name shall be applied to
  * the database.
  */
-func (s *BackendServer) LoginUser(con context.Context, user *pb.User) (*pb.User, error) {
+func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.User, error) {
 	userData, err := s.dbManager.GetUserById(user.UserId)
 
 	if userData == nil {
@@ -171,31 +174,31 @@ func (s *BackendServer) LoginUser(con context.Context, user *pb.User) (*pb.User,
 			userData, err = s.dbManager.AddUser(user.Username)
 			if err != nil {
 				log.Printf("Failed to add user: %s", user.Username)
-				return &pb.User{Username: user.Username, UserId: 0}, nil
+				return &bepb.User{Username: user.Username, UserId: 0}, nil
 			}
 		} else {
 			// else return an error to the rpc client
-			return &pb.User{Username: user.Username, UserId: 0}, nil
+			return &bepb.User{Username: user.Username, UserId: 0}, nil
 		}
 	} else if userData.User.Username != user.Username {
 		// Update the username in the database if the names differ
 		err = s.dbManager.UpdateUsername(user.Username, user.UserId)
 		if err != nil {
 			log.Println("Could not update username")
-			return &pb.User{Username: user.Username, UserId: 0}, nil
+			return &bepb.User{Username: user.Username, UserId: 0}, nil
 		}
 	}
 
 	// cache the user id and username
 	s.userCache.AddUserToCache(userData.User.UserId, user.Username)
 
-	return &pb.User{Username: user.Username, UserId: userData.User.UserId}, nil
+	return &bepb.User{Username: user.Username, UserId: userData.User.UserId}, nil
 }
 
 /*
  * Pops a song off the top of the queue and returns it
  */
-func (s *BackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song, error) {
+func (s *BackendServer) PopQueue(con context.Context, empty *cmpb.Empty) (*cmpb.Song, error) {
 	if s.queue.Len() > 0 {
 		song := s.queue.PopQueue()
 		s.queue.SavePlaylist(queueSnapshot)
@@ -204,14 +207,14 @@ func (s *BackendServer) PopQueue(con context.Context, empty *pb.Empty) (*pb.Song
 	}
 
 	log.Println("Queue is empty, nothing to pop")
-	return &pb.Song{}, nil
+	return &cmpb.Song{}, nil
 }
 
 /*
  * Saves the current playlist to the given file location
  */
-func (s *BackendServer) SavePlaylist(con context.Context, fname *pb.FilePath) (*pb.Error, error) {
-	response := &pb.Error{Success: false}
+func (s *BackendServer) SavePlaylist(con context.Context, fname *bepb.FilePath) (*bepb.Error, error) {
+	response := &bepb.Error{Success: false}
 	err := s.queue.SavePlaylist(fname.Path)
 	if err != nil {
 		response.Message = err.Error()
@@ -257,15 +260,15 @@ func (s *BackendServer) getUsernameFromId(userId uint32) string {
  * Removes the given song from the playlist. The user identified by the song
  * eviction must match the id of the user who submitted the song.
  */
-func (s *BackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (*pb.Error, error) {
+func (s *BackendServer) RemoveSong(con context.Context, eviction *bepb.Eviction) (*bepb.Error, error) {
 	err := s.queue.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
 
 	if err != nil {
 		log.Printf("Failed to remove song from playlist: %v", err)
-		return &pb.Error{Success: false, Message: err.Error()}, nil
+		return &bepb.Error{Success: false, Message: err.Error()}, nil
 	} else {
 		log.Printf("Removed song: {song id: %d, user id: %d}", eviction.GetSongId(), eviction.GetUserId())
-		return &pb.Error{Success: true, Message: "Success"}, nil
+		return &bepb.Error{Success: true, Message: "Success"}, nil
 	}
 }
 
@@ -273,12 +276,27 @@ func (s *BackendServer) RemoveSong(con context.Context, eviction *pb.Eviction) (
  * Returns the song that should be considered "now playing". If there isn't a
  * current song, then an empty Song struct is returned.
  */
-func (s *BackendServer) GetNowPlaying(con context.Context, empty *pb.Empty) (*pb.Song, error) {
+func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*cmpb.Song, error) {
 	nowPlaying := s.queue.NowPlaying()
 
 	if nowPlaying == nil {
-		return &pb.Song{}, nil
+		return &cmpb.Song{}, nil
 	}
 
 	return nowPlaying, nil
+}
+
+func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) error {
+	for {
+		status, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		log.Printf("%v", status)
+	}
 }

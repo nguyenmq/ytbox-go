@@ -2,11 +2,14 @@
 // clients to the backend.
 //
 // Usage:
-// protoc -I proto/backend --go_out=plugins=grpc:proto/backend proto/backend/backend.proto
+// cd to project root
+// protoc --go_out=plugins=grpc:. github.com/nguyenmq/ytbox-go/proto/backend/*.proto
 
 syntax = "proto3";
 
-package backendpb;
+package backend_pb;
+
+import "github.com/nguyenmq/ytbox-go/proto/common/common.proto";
 
 service YtbBackend {
     // Submit a song to the backend service to be added to the play queue
@@ -16,25 +19,22 @@ service YtbBackend {
     rpc RemoveSong(Eviction) returns (Error) {}
 
     // Get the "now playing" song
-    rpc GetNowPlaying(Empty) returns (Song) {}
+    rpc GetNowPlaying(common_pb.Empty) returns (common_pb.Song) {}
 
     // Get the songs in the queue
-    rpc GetPlaylist(Empty) returns (Playlist) {}
+    rpc GetPlaylist(common_pb.Empty) returns (Playlist) {}
 
     // Save the playlist to the given file
     rpc SavePlaylist(FilePath) returns (Error) {}
 
     // Pop a song off the head of the queue
-    rpc PopQueue(Empty) returns (Song) {}
+    rpc PopQueue(common_pb.Empty) returns (common_pb.Song) {}
 
     // Login the given user. If a user with the given id doesn't exist, then a
     // new one with the given name will be created. A successful call will
     // return the user will an id greater than 0.
     rpc LoginUser(User) returns (User) {}
 }
-
-// Empty message
-message Empty {}
 
 // Contains error number and message
 message Error {
@@ -54,37 +54,9 @@ message Submission {
     uint32 userId = 2;
 }
 
-enum ServiceType {
-    ServiceNone    = 0;
-    ServiceYoutube = 1;
-    ServiceSpotify = 2;
-    ServiceLocal   = 3;
-}
-
-// A song in the queue
-message Song {
-    // title of the song
-    string title = 1;
-
-    // internal song id
-    uint32 songId = 2;
-
-    // name of user who submitted the song
-    string username = 3;
-
-    // id of user
-    uint32 userId = 4;
-
-    // id of service song belongs to
-    ServiceType service = 5;
-
-    // id specific to song's service
-    string serviceId = 6;
-}
-
 // Playlist message
 message Playlist {
-    repeated Song songs = 1;
+    repeated common_pb.Song songs = 1;
 }
 
 // Contains a file path

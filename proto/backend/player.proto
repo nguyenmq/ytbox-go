@@ -1,0 +1,43 @@
+// Defines the protobuf messsages and services used by the yt_box backend and
+// musics players that request songs from the backend
+//
+// Usage:
+// cd to project root
+// protoc --go_out=plugins=grpc:. github.com/nguyenmq/ytbox-go/proto/backend/*.proto
+
+syntax = "proto3";
+
+package backend_pb;
+
+import "github.com/nguyenmq/ytbox-go/proto/common/common.proto";
+
+service YtbBePlayer {
+    // Controller stream for the player. The player reports its status to the
+    // backend and the backend sends back songs and player commands (stop,
+    // pause, skip)
+    rpc SongPlayer(stream PlayerStatus) returns (stream PlayerControl) {}
+}
+
+// Commands sent between player and backend
+enum CommandType {
+    None  = 0; // No action
+    Ready = 1; // Ready for a song to play
+    Play  = 2; // Play song
+    Next  = 3; // Skip to next song
+    Stop  = 4; // Stop playing
+}
+
+// status reported back by the player
+message PlayerStatus {
+    // Command
+    CommandType Command = 1;
+}
+
+// control messages sent by the backend
+message PlayerControl {
+    // Command
+    CommandType Command = 1;
+
+    // Song to play
+    common_pb.Song Song= 2;
+}

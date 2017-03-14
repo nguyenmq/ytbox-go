@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/dhowden/tag"
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 	validYt = regexp.MustCompile(`^(https?://)(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
 )
 
-func fetchSongData(link string, song *pb.Song) error {
+func fetchSongData(link string, song *cmpb.Song) error {
 	if validYt.MatchString(link) {
 		return fetchYoutubeSongData(link, song)
 	} else if validFile.MatchString(link) {
@@ -41,7 +41,7 @@ func fetchSongData(link string, song *pb.Song) error {
  * id, and service type. Currently only YouTube links are supported. Populates
  * the Song structure with the song data it retrieves. Returns an error status.
  */
-func fetchYoutubeSongData(link string, song *pb.Song) error {
+func fetchYoutubeSongData(link string, song *cmpb.Song) error {
 	out, err := exec.Command("youtube-dl", "-e", "--get-id", link).Output()
 
 	if err != nil {
@@ -57,7 +57,7 @@ func fetchYoutubeSongData(link string, song *pb.Song) error {
 
 	song.Title = parsed[0]
 	song.ServiceId = parsed[1]
-	song.Service = pb.ServiceType_ServiceYoutube
+	song.Service = cmpb.ServiceType_ServiceYoutube
 
 	return nil
 }
@@ -65,7 +65,7 @@ func fetchYoutubeSongData(link string, song *pb.Song) error {
 /*
  * Read the metadata out of a local mp3 or flac file
  */
-func fetchLocalSongData(link string, song *pb.Song) error {
+func fetchLocalSongData(link string, song *cmpb.Song) error {
 	file, err := os.Open(link)
 	if err != nil {
 		log.Printf("Failed to read file %s: %v", link, err)
@@ -81,7 +81,7 @@ func fetchLocalSongData(link string, song *pb.Song) error {
 
 	song.Title = fmt.Sprintf("%s - %s", tags.Artist(), tags.Title())
 	song.ServiceId = link
-	song.Service = pb.ServiceType_ServiceLocal
+	song.Service = cmpb.ServiceType_ServiceLocal
 
 	return nil
 }

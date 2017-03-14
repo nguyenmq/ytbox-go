@@ -41,8 +41,8 @@ func (c *UserCache) AddUserToCache(userId uint32, username string) {
 	defer c.lock.Unlock()
 
 	cachedName, exists := c.cache[userId]
-	if exists && username == cachedName {
-		log.Printf("Warning: overwriting cached user: {id: %d, cur name: %s, new name: %s", userId, cachedName, username)
+	if exists && username != cachedName {
+		log.Printf("Warning: overwriting cached user: {id: %d, cur name: %s, new name: %s}", userId, cachedName, username)
 	} else {
 		log.Printf("Cached: {user id: %d, username: %s}", userId, username)
 	}

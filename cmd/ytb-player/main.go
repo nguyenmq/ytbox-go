@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	//"os/exec"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	//cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
@@ -56,7 +57,7 @@ var (
  * Connect to the remote server. Remember to close the returned connect when
  * done.
  */
-func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
+func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayerClient) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
@@ -66,39 +67,47 @@ func connectToRemote() (*grpc.ClientConn, pb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	client := pb.NewYtbBackendClient(conn)
+	client := bepb.NewYtbBePlayerClient(conn)
 	return conn, client
 }
 
 func main() {
-	var link string
+	//var link string
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	conn, client := connectToRemote()
 	defer conn.Close()
 
-	song, err := client.PopQueue(context.Background(), &pb.Empty{})
+	stream, err := client.SongPlayer(context.Background())
 	if err != nil {
-		fmt.Printf("failed to call PopQueue: %v\n", err)
+		fmt.Printf("Failed to connect: %v\n", err)
 		os.Exit(1)
 	}
 
-	switch song.Service {
-	case pb.ServiceType_ServiceLocal:
-		link = song.ServiceId
+	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
 
-	case pb.ServiceType_ServiceYoutube:
-		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
+	//song, err := client.PopQueue(context.Background(), &bepb.Empty{})
+	//if err != nil {
+	//	fmt.Printf("failed to call PopQueue: %v\n", err)
+	//	os.Exit(1)
+	//}
 
-	default:
-		fmt.Printf("Unsupported link: %s\n", song.ServiceId)
-	}
+	//switch song.Service {
+	//case cmpb.ServiceType_ServiceLocal:
+	//	link = song.ServiceId
 
-	if link != "" {
-		err = exec.Command("mpv", "--fs", link).Run()
-		if err != nil {
-			fmt.Printf("Failed to play link: %s\n", link)
-		}
-	}
+	//case cmpb.ServiceType_ServiceYoutube:
+	//	link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
+
+	//default:
+	//	fmt.Printf("Unsupported link: %s\n", song.ServiceId)
+	//}
+
+	//if link != "" {
+	//	err = exec.Command("mpv", "--fs", link).Run()
+	//	if err != nil {
+	//		fmt.Printf("Failed to play link: %s\n", link)
+	//	}
+	//}
 }

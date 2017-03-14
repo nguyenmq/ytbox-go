@@ -7,11 +7,12 @@ package database
 import (
 	"time"
 
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 type UserData struct {
-	User       pb.User
+	User       bepb.User
 	LoggedIn   bool
 	LastAccess time.Time
 }
@@ -21,7 +22,7 @@ type UserData struct {
  */
 type DbManager interface {
 	// Add a new song to the database
-	AddSong(song *pb.Song) error
+	AddSong(song *cmpb.Song) error
 
 	// Add a new user to the users table and returns the user's id
 	AddUser(username string) (*UserData, error)

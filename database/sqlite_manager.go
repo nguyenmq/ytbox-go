@@ -10,7 +10,7 @@ import (
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 const (
@@ -80,7 +80,7 @@ func (mgr *SqliteManager) Init(dbPath string) {
 /*
  * Add a new song to the database
  */
-func (mgr *SqliteManager) AddSong(song *pb.Song) error {
+func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
 	stmt, err := mgr.db.Prepare(insertSong)
 	if err != nil {
 		log.Printf("Error preparing add song statement: %v", err)
