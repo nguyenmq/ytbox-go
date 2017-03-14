@@ -30,6 +30,8 @@ type FifoQueue struct {
 	playQueue *list.List    // the playlist of songs
 	lock      *sync.RWMutex // read/write lock on the playlist
 	npLock    *sync.Mutex   // lock on the now playing value
+	cLock     *sync.Mutex   // mutex for condition variable
+	cond      *sync.Cond    // condition variable on the queue
 }
 
 /*
@@ -39,6 +41,10 @@ func (fifo *FifoQueue) AddSong(song *cmpb.Song) {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 	fifo.playQueue.PushBack(song)
+
+	if fifo.playQueue.Len() == 1 {
+		fifo.cond.Broadcast()
+	}
 }
 
 /*
@@ -48,6 +54,8 @@ func (fifo *FifoQueue) Init() {
 	fifo.playQueue = list.New()
 	fifo.lock = new(sync.RWMutex)
 	fifo.npLock = new(sync.Mutex)
+	fifo.cLock = new(sync.Mutex)
+	fifo.cond = sync.NewCond(fifo.cLock)
 }
 
 /*
@@ -85,6 +93,13 @@ func (fifo *FifoQueue) GetPlaylist() *bepb.Playlist {
 	}
 
 	return &bepb.Playlist{Songs: songs}
+}
+
+/*
+ * Returns a condition variable on the queue
+ */
+func (fifo *FifoQueue) GetConditionVar() *sync.Cond {
+	return fifo.cond
 }
 
 /*

@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
-	//"os/exec"
+	"os/exec"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
-	//cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
@@ -22,36 +23,6 @@ var (
 	remotePort = app.Flag("port", "Port of remote ytb-be service").Default("8000").Short('p').String()
 	continuous = app.Flag("cont", "Continuous play songs from the queue").Short('c').Bool()
 )
-
-// Pops the next song off the queue and plays it
-//func PlayQueue(queue sched.QueueScheduler, play bool, stop <-chan int) {
-//	var ticker <-chan time.Time = time.Tick(2 * time.Second)
-//	var halt bool = false
-//
-//	for !halt {
-//		select {
-//		case <-ticker:
-//			nextSong := queue.PopQueue()
-//
-//			if nextSong != nil {
-//				fmt.Println("Popped song:", nextSong.Title)
-//
-//				if play {
-//					link := fmt.Sprintf("https://www.youtube.com/watch?v=%s", nextSong.ServiceId)
-//					err := exec.Command("mpv", "--fs", link).Run()
-//
-//					if err != nil {
-//						fmt.Println("Failed to play link:", link)
-//					}
-//				}
-//			}
-//
-//		case <-stop:
-//			fmt.Println("Told to stop")
-//			halt = true
-//		}
-//	}
-//}
 
 /*
  * Connect to the remote server. Remember to close the returned connect when
@@ -71,10 +42,75 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayerClient) {
 	return conn, client
 }
 
+func sendStatus(stream bepb.YtbBePlayer_SongPlayerClient, playing chan int) bool {
+	<-playing
+	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+	return false
+}
+
+func receiveStatus(stream bepb.YtbBePlayer_SongPlayerClient, playing chan int) bool {
+	retry := true
+
+	for retry {
+		status, err := stream.Recv()
+
+		if err == io.EOF {
+			fmt.Println("Disconnected")
+			return true
+		}
+
+		if err != nil {
+			fmt.Printf("failed to receive controller messager: %v\n", err)
+			return true
+		}
+
+		fmt.Printf("Received: %v\n", status)
+
+		if status.Command == bepb.CommandType_Play {
+			go playSong(status.Song, playing)
+			retry = false
+		} else {
+			retry = true
+		}
+
+		return false
+	}
+
+	return false
+}
+
+func playSong(song *cmpb.Song, playing chan int) {
+	var link string
+
+	switch song.Service {
+	case cmpb.ServiceType_ServiceLocal:
+		link = song.ServiceId
+
+	case cmpb.ServiceType_ServiceYoutube:
+		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
+
+	default:
+		fmt.Printf("Unsupported link: %s\n", song.ServiceId)
+	}
+
+	if link != "" {
+		err := exec.Command("mpv", "--fs", link).Run()
+		if err != nil {
+			fmt.Printf("Failed to play link: %s\n", link)
+		}
+	}
+
+	playing <- 1
+}
+
 func main() {
-	//var link string
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	send := make(chan int)
+	receive := make(chan int)
+	playing := make(chan int)
+	stop := false
 
 	conn, client := connectToRemote()
 	defer conn.Close()
@@ -85,29 +121,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+	// receive a message from the server
+	go func() {
+		playing <- 1
+		for !stop {
+			<-receive
+			stop = receiveStatus(stream, playing)
+			send <- 1
+		}
+	}()
 
-	//song, err := client.PopQueue(context.Background(), &bepb.Empty{})
-	//if err != nil {
-	//	fmt.Printf("failed to call PopQueue: %v\n", err)
-	//	os.Exit(1)
-	//}
+	sendStatus(stream, playing)
+	receive <- 1
 
-	//switch song.Service {
-	//case cmpb.ServiceType_ServiceLocal:
-	//	link = song.ServiceId
+	// send a message to the server
+	for !stop {
+		<-send
+		stop = sendStatus(stream, playing)
+		receive <- 1
+	}
 
-	//case cmpb.ServiceType_ServiceYoutube:
-	//	link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
-
-	//default:
-	//	fmt.Printf("Unsupported link: %s\n", song.ServiceId)
-	//}
-
-	//if link != "" {
-	//	err = exec.Command("mpv", "--fs", link).Run()
-	//	if err != nil {
-	//		fmt.Printf("Failed to play link: %s\n", link)
-	//	}
-	//}
+	fmt.Println("end")
 }

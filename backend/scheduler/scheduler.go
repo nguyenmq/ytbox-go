@@ -5,6 +5,8 @@
 package scheduler
 
 import (
+	"sync"
+
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
@@ -29,6 +31,9 @@ type QueueScheduler interface {
 
 	// Get a list of the currents songs in the queue
 	GetPlaylist() *bepb.Playlist
+
+	// Get condition variable on the queue
+	GetConditionVar() *sync.Cond
 
 	// Pop a song off the queue
 	PopQueue() *cmpb.Song

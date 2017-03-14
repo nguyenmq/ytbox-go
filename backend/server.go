@@ -287,6 +287,8 @@ func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*
 }
 
 func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) error {
+	var control *bepb.PlayerControl
+
 	for {
 		status, err := stream.Recv()
 		if err == io.EOF {
@@ -298,5 +300,22 @@ func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) err
 		}
 
 		log.Printf("%v", status)
+
+		// Wait for the queue to be populated with a song
+		cond := s.queue.GetConditionVar()
+		cond.L.Lock()
+		for s.queue.Len() == 0 {
+			cond.Wait()
+		}
+		cond.L.Unlock()
+
+		song := s.queue.PopQueue()
+		if song != nil {
+			control = &bepb.PlayerControl{Command: bepb.CommandType_Play, Song: song}
+		} else {
+			control = &bepb.PlayerControl{Command: bepb.CommandType_None}
+		}
+
+		stream.Send(control)
 	}
 }
