@@ -5,7 +5,9 @@
 package main
 
 import (
+	"log"
 	"os"
+	"os/signal"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -32,5 +34,18 @@ func main() {
 	defer logFile.Close()
 
 	ytbServer := backend.NewServer(*host+":"+*port, *loadFile, *dbFile)
+
+	go func() {
+		stop := make(chan os.Signal)
+		signal.Notify(stop, os.Interrupt)
+
+		select {
+		case <-stop:
+			ytbServer.Stop()
+		}
+	}()
+
+	log.Println("Server started")
 	ytbServer.Serve()
+	log.Println("Server stopped")
 }

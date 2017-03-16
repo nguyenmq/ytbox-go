@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
+	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -42,44 +44,75 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayerClient) {
 	return conn, client
 }
 
-func sendStatus(stream bepb.YtbBePlayer_SongPlayerClient, playing chan int) bool {
-	<-playing
-	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
-	return false
-}
-
-func receiveStatus(stream bepb.YtbBePlayer_SongPlayerClient, playing chan int) bool {
-	retry := true
-
-	for retry {
+/*
+ * Receieve a new status and song from the server.
+ */
+func receiveSong(stream bepb.YtbBePlayer_SongPlayerClient, newStatus chan bepb.PlayerControl) {
+	for {
 		status, err := stream.Recv()
 
 		if err == io.EOF {
 			fmt.Println("Disconnected")
-			return true
+			close(newStatus)
+			break
 		}
 
 		if err != nil {
 			fmt.Printf("failed to receive controller messager: %v\n", err)
-			return true
+			close(newStatus)
+			break
 		}
 
-		fmt.Printf("Received: %v\n", status)
-
-		if status.Command == bepb.CommandType_Play {
-			go playSong(status.Song, playing)
-			retry = false
-		} else {
-			retry = true
-		}
-
-		return false
+		newStatus <- *status
 	}
-
-	return false
 }
 
-func playSong(song *cmpb.Song, playing chan int) {
+/*
+ * Handle a new status message from the server.
+ */
+func handleNewStatus(status *bepb.PlayerControl, stream bepb.YtbBePlayer_SongPlayerClient) {
+	fmt.Printf("Received: %v\n", status)
+
+	if status.Command == bepb.CommandType_Play {
+		go playSong(status.Song, stream)
+	}
+}
+
+/*
+ * Handle messages from other go routines.
+ */
+func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient) {
+	isRunning := true
+	newStatus := make(chan bepb.PlayerControl)
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+
+	// send the initial command to the server to signal the player is ready
+	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+
+	go receiveSong(stream, newStatus)
+
+	for isRunning {
+		select {
+		case status, ok := <-newStatus:
+			if !ok {
+				return
+			}
+			handleNewStatus(&status, stream)
+
+		case <-stop:
+			stream.CloseSend()
+			return
+		}
+
+	}
+}
+
+/*
+ * Play the given song and return a ready status to the remote server when
+ * done.
+ */
+func playSong(song *cmpb.Song, stream bepb.YtbBePlayer_SongPlayerClient) {
 	var link string
 
 	switch song.Service {
@@ -100,17 +133,13 @@ func playSong(song *cmpb.Song, playing chan int) {
 		}
 	}
 
-	playing <- 1
+	// tell the remote server the player is ready for another song
+	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
 }
 
 func main() {
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
-
-	send := make(chan int)
-	receive := make(chan int)
-	playing := make(chan int)
-	stop := false
 
 	conn, client := connectToRemote()
 	defer conn.Close()
@@ -121,25 +150,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// receive a message from the server
-	go func() {
-		playing <- 1
-		for !stop {
-			<-receive
-			stop = receiveStatus(stream, playing)
-			send <- 1
-		}
-	}()
+	interactionLoop(stream)
 
-	sendStatus(stream, playing)
-	receive <- 1
-
-	// send a message to the server
-	for !stop {
-		<-send
-		stop = sendStatus(stream, playing)
-		receive <- 1
-	}
-
+	time.Sleep(200 * time.Millisecond)
 	fmt.Println("end")
 }

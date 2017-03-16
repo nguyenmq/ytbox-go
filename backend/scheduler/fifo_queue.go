@@ -96,10 +96,16 @@ func (fifo *FifoQueue) GetPlaylist() *bepb.Playlist {
 }
 
 /*
- * Returns a condition variable on the queue
+ * Blocks the current thread while the size of the playlist is zero. The playlist
+ * will notify all blocked threads that the size is once again greater than one
+ * when a new song is added.
  */
-func (fifo *FifoQueue) GetConditionVar() *sync.Cond {
-	return fifo.cond
+func (fifo *FifoQueue) WaitForMoreSongs() {
+	fifo.cond.L.Lock()
+	for fifo.Len() == 0 {
+		fifo.cond.Wait()
+	}
+	fifo.cond.L.Unlock()
 }
 
 /*
