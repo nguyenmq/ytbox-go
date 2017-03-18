@@ -35,6 +35,7 @@ type BackendServer struct {
 	queue     sched.QueueScheduler // playlist queue
 	dbManager db.DbManager         // database manager
 	userCache *UserCache           // user identity cache
+	playerMgr *playerManager       // player manager
 }
 
 /*
@@ -72,6 +73,10 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 		server.loadPlaylistFromFile(loadFile)
 	}
 
+	// initialize the player manager
+	server.playerMgr = new(playerManager)
+	server.playerMgr.Init(server.queue)
+
 	return server
 }
 
@@ -79,6 +84,7 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
  * Start the server
  */
 func (s *BackendServer) Serve() {
+	s.playerMgr.Start()
 	s.beServer.Serve(s.listener)
 }
 
@@ -86,6 +92,7 @@ func (s *BackendServer) Serve() {
  * Stop the server
  */
 func (s *BackendServer) Stop() {
+	s.playerMgr.Stop()
 	s.beServer.GracefulStop()
 }
 
@@ -293,85 +300,47 @@ func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*
 	return nowPlaying, nil
 }
 
-func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) error {
-	newStatus := make(chan bepb.PlayerStatus)
+/*
+ * Forwards the command to skip the currently playing song onto the remote
+ * player
+ */
+func (s *BackendServer) NextSong(con context.Context, empty *cmpb.Empty) (*bepb.Error, error) {
+	return &bepb.Error{}, nil
+}
 
-	// create a goroutine to handle new player statuses
-	go s.dispatchPlayerStatus(stream, newStatus)
+/*
+ * Forwards the command to pause the currently playing song onto the remote
+ * player
+ */
+func (s *BackendServer) PauseSong(con context.Context, empty *cmpb.Empty) (*bepb.Error, error) {
+	return &bepb.Error{}, nil
+}
+
+/*
+ * Stream RPC connection with the remote player client
+ */
+func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) error {
+	var err error = nil
+
+	id := s.playerMgr.Append(stream)
 
 	for {
 		status, err := stream.Recv()
 		if err == io.EOF {
 			log.Printf("Disconnected from remote player")
-			close(newStatus)
-			return nil
+			err = nil
+			break
 		}
 
 		if err != nil {
 			log.Printf("Error receiving message from remote player: %v")
-			close(newStatus)
-			return err
+			break
 		}
 
-		// write the received status to the channel
-		newStatus <- *status
+		// write the received status to the player manager
+		s.playerMgr.FanIn() <- playerMessage{Id: id, Status: *status}
 	}
-}
 
-/*
- * Handles new messages coming from the remote player. This is handled in a
- * separate so that the main routine handling the rpc stream can continue
- * receiving messages from the player.
- */
-func (s *BackendServer) dispatchPlayerStatus(stream bepb.YtbBePlayer_SongPlayerServer, newStatus chan bepb.PlayerStatus) {
-	var control *bepb.PlayerControl
-	newSong := make(chan bool)
-	quit := make(chan bool)
-
-	for {
-		select {
-		case status, ok := <-newStatus:
-			if !ok {
-				// tell the gorouting waiting on the playlist to quit if the
-				// status channel was closed
-				close(quit)
-				return
-			}
-
-			log.Printf("Player status: %v", status.GetCommand())
-			if status.GetCommand() == bepb.CommandType_Ready {
-				go func() {
-					// Wait for there to be at least one song in the playlist.
-					// Because we want to block while wait for more songs, this
-					// block is in another goroutine
-					s.queue.WaitForMoreSongs()
-
-					select {
-					// while this goroutine was waiting for the playlist to be
-					// filled with more songs, the remote player may have
-					// disconnected. If so, then the quit channel should be
-					// closed
-					case <-quit:
-						return
-
-					// If the player is still connected, then pop the next song
-					default:
-						song := s.queue.PopQueue()
-						log.Println("Popped song")
-						if song != nil {
-							control = &bepb.PlayerControl{Command: bepb.CommandType_Play, Song: song}
-						} else {
-							control = &bepb.PlayerControl{Command: bepb.CommandType_None}
-						}
-
-						newSong <- true
-					}
-				}()
-			}
-
-		// a new song was popped off the playlist by the goroutine
-		case <-newSong:
-			stream.Send(control)
-		}
-	}
+	s.playerMgr.RemoveStream(id)
+	return err
 }

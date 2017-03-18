@@ -34,6 +34,12 @@ service YtbBackend {
     // new one with the given name will be created. A successful call will
     // return the user will an id greater than 0.
     rpc LoginUser(User) returns (User) {}
+
+    // Skip to the next song in the playlist
+    rpc NextSong(common_pb.Empty) returns (Error) {}
+
+    // Pause the currently playing song
+    rpc PauseSong(common_pb.Empty) returns (Error) {}
 }
 
 // Contains error number and message
