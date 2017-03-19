@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	mpv "github.com/DexterLB/mpvipc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -26,11 +27,58 @@ var (
 	continuous = app.Flag("cont", "Continuous play songs from the queue").Short('c').Bool()
 )
 
+const (
+	mpvSocket = "./.mpvsocket"
+)
+
 /*
- * Connect to the remote server. Remember to close the returned connect when
- * done.
+ * Remote contoller to interface with mpv
  */
-func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayerClient) {
+type Remote struct {
+	conn *mpv.Connection
+}
+
+/*
+ * Initialize the remote
+ */
+func (r *Remote) Init(conn *mpv.Connection) {
+	r.conn = conn
+}
+
+/*
+ * Load a song into mpv
+ */
+func (r *Remote) LoadSong(name string) {
+	_, err := r.conn.Call("loadfile", name, "append-play")
+	if err != nil {
+		fmt.Printf("Failed to load song: %v\n", err)
+	}
+}
+
+/*
+ * Toggle the pause state
+ */
+func (r *Remote) TogglePause() {
+	_, err := r.conn.Call("cycle", "pause", "up")
+	if err != nil {
+		fmt.Printf("Failed to toggle pause: %v\n", err)
+	}
+}
+
+/*
+ * Tell mpv to quit
+ */
+func (r *Remote) Quit() {
+	_, err := r.conn.Call("quit")
+	if err != nil {
+		fmt.Printf("Failed to call quit: %v\n", err)
+	}
+}
+
+/*
+ * Connect to the remote server and create an RPC client
+ */
+func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayer_SongPlayerClient) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
@@ -41,13 +89,19 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayerClient) {
 	}
 
 	client := bepb.NewYtbBePlayerClient(conn)
-	return conn, client
+	stream, err := client.SongPlayer(context.Background())
+	if err != nil {
+		fmt.Printf("Failed to connect: %v\n", err)
+		os.Exit(1)
+	}
+
+	return conn, stream
 }
 
 /*
  * Receieve a new status and song from the server.
  */
-func receiveSong(stream bepb.YtbBePlayer_SongPlayerClient, newStatus chan bepb.PlayerControl) {
+func receiveStatus(stream bepb.YtbBePlayer_SongPlayerClient, newStatus chan *bepb.PlayerControl) {
 	for {
 		status, err := stream.Recv()
 
@@ -63,56 +117,63 @@ func receiveSong(stream bepb.YtbBePlayer_SongPlayerClient, newStatus chan bepb.P
 			break
 		}
 
-		newStatus <- *status
+		newStatus <- status
 	}
 }
 
 /*
  * Handle a new status message from the server.
  */
-func handleNewStatus(status *bepb.PlayerControl, stream bepb.YtbBePlayer_SongPlayerClient) {
+func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 	fmt.Printf("Received: %v\n", status)
 
 	if status.Command == bepb.CommandType_Play {
-		go playSong(status.Song, stream)
+		playSong(status.Song, remote)
 	}
 }
 
 /*
- * Handle messages from other go routines.
+ * Handle messages from other goroutines.
  */
-func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient) {
-	isRunning := true
-	newStatus := make(chan bepb.PlayerControl)
-	stop := make(chan os.Signal)
-	signal.Notify(stop, os.Interrupt)
+func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient, conn *mpv.Connection) {
+	newStatus := make(chan *bepb.PlayerControl)
+	halt := make(chan os.Signal)
+	signal.Notify(halt, os.Interrupt)
+	remote := new(Remote)
+	remote.Init(conn)
+	events, stop := conn.NewEventListener()
 
 	// send the initial command to the server to signal the player is ready
 	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
 
-	go receiveSong(stream, newStatus)
+	go receiveStatus(stream, newStatus)
 
-	for isRunning {
+	for {
 		select {
 		case status, ok := <-newStatus:
-			if !ok {
-				return
+			if ok {
+				handleNewStatus(status, remote)
 			}
-			handleNewStatus(&status, stream)
 
-		case <-stop:
+		case <-halt:
+			stop <- struct{}{}
 			stream.CloseSend()
+			remote.Quit()
 			return
+
+		case event := <-events:
+			if event.Name == "idle" {
+				stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+			}
 		}
 
 	}
 }
 
 /*
- * Play the given song and return a ready status to the remote server when
- * done.
+ * Build the song link and play the given song
  */
-func playSong(song *cmpb.Song, stream bepb.YtbBePlayer_SongPlayerClient) {
+func playSong(song *cmpb.Song, remote *Remote) {
 	var link string
 
 	switch song.Service {
@@ -126,32 +187,38 @@ func playSong(song *cmpb.Song, stream bepb.YtbBePlayer_SongPlayerClient) {
 		fmt.Printf("Unsupported link: %s\n", song.ServiceId)
 	}
 
-	if link != "" {
-		err := exec.Command("mpv", "--fs", link).Run()
-		if err != nil {
-			fmt.Printf("Failed to play link: %s\n", link)
-		}
-	}
+	remote.LoadSong(link)
+}
 
-	// tell the remote server the player is ready for another song
-	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+/*
+ * Start mpv in idle mode
+ */
+func startMpv() *exec.Cmd {
+	socketFlag := "--input-ipc-server=" + mpvSocket
+	cmd := exec.Command("mpv", "--idle", socketFlag, "--fullscreen", "--force-window")
+	cmd.Start()
+	time.Sleep(500 * time.Millisecond)
+	return cmd
 }
 
 func main() {
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	conn, client := connectToRemote()
-	defer conn.Close()
+	mpvCmd := startMpv()
 
-	stream, err := client.SongPlayer(context.Background())
-	if err != nil {
-		fmt.Printf("Failed to connect: %v\n", err)
-		os.Exit(1)
+	mpvConn := mpv.NewConnection(mpvSocket)
+	if err := mpvConn.Open(); err != nil {
+		panic(err)
 	}
 
-	interactionLoop(stream)
+	conn, stream := connectToRemote()
+	defer conn.Close()
 
+	interactionLoop(stream, mpvConn)
+
+	mpvCmd.Wait()
+	os.Remove(mpvSocket)
 	time.Sleep(200 * time.Millisecond)
 	fmt.Println("end")
 }

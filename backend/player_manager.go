@@ -34,7 +34,8 @@ type playerMessage struct {
  * Manages communication between the backend server and remote player clients.
  */
 type playerManager struct {
-	in         chan playerMessage
+	fanIn      chan playerMessage
+	fanOut     chan bepb.CommandType
 	streams    map[int]bepb.YtbBePlayer_SongPlayerServer
 	ready      map[int]bool
 	playerLock sync.RWMutex
@@ -47,7 +48,8 @@ type playerManager struct {
  * initialized.
  */
 func (mgr *playerManager) Init(queue sched.QueueScheduler) {
-	mgr.in = make(chan playerMessage)
+	mgr.fanIn = make(chan playerMessage)
+	mgr.fanOut = make(chan bepb.CommandType)
 	mgr.streams = make(map[int]bepb.YtbBePlayer_SongPlayerServer, 2)
 	mgr.ready = make(map[int]bool, 2)
 	mgr.streamIds = 0
@@ -71,7 +73,14 @@ func (mgr *playerManager) Append(out bepb.YtbBePlayer_SongPlayerServer) int {
  * Fan in messages received from the remote players
  */
 func (mgr *playerManager) FanIn() chan<- playerMessage {
-	return mgr.in
+	return mgr.fanIn
+}
+
+/*
+ * Fan commands out to player clients
+ */
+func (mgr *playerManager) FanOut() chan<- bepb.CommandType {
+	return mgr.fanOut
 }
 
 /*
@@ -94,7 +103,20 @@ func (mgr *playerManager) Start() {
 
 		for {
 			select {
-			case msg, ok := <-mgr.in:
+			case cmd, ok := <-mgr.fanOut:
+				if !ok {
+					close(nextSong)
+					return
+				}
+
+				log.Printf("Sending out command: %v", cmd)
+				mgr.playerLock.RLock()
+				for id, out := range mgr.streams {
+					go func() { out.Send(&bep) }()
+				}
+				mgr.playerLock.RUnlock()
+
+			case msg, ok := <-mgr.fanIn:
 				if !ok {
 					close(nextSong)
 					return
@@ -119,7 +141,7 @@ func (mgr *playerManager) Start() {
 				if ok && control.GetCommand() == bepb.CommandType_Play {
 					mgr.playerLock.Lock()
 					for id, out := range mgr.streams {
-						out.Send(&control)
+						go func() { out.Send(&control) }()
 						mgr.ready[id] = PLAYER_BUSY
 					}
 					mgr.playerLock.Unlock()
@@ -159,7 +181,7 @@ func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
  * Stop the player manager
  */
 func (mgr *playerManager) Stop() {
-	close(mgr.in)
+	close(mgr.fanIn)
 }
 
 /*
