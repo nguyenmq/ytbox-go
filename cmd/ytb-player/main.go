@@ -69,9 +69,11 @@ func (r *Remote) TogglePause() {
  * Tell mpv to quit
  */
 func (r *Remote) Quit() {
-	_, err := r.conn.Call("quit")
-	if err != nil {
-		fmt.Printf("Failed to call quit: %v\n", err)
+	if !r.conn.IsClosed() {
+		_, err := r.conn.Call("quit")
+		if err != nil {
+			fmt.Printf("Failed to call quit: %v\n", err)
+		}
 	}
 }
 
@@ -79,8 +81,10 @@ func (r *Remote) Quit() {
  * Connect to the remote server and create an RPC client
  */
 func connectToRemote() (*grpc.ClientConn, bepb.YtbBePlayer_SongPlayerClient) {
-	var opts []grpc.DialOption
+	opts := []grpc.DialOption{}
 	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+	opts = append(opts, grpc.FailOnNonTempDialError(true))
 
 	conn, err := grpc.Dial(*remoteHost+":"+*remotePort, opts...)
 	if err != nil {
@@ -138,36 +142,64 @@ func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient, conn *mpv.Connection) {
 	newStatus := make(chan *bepb.PlayerControl)
 	halt := make(chan os.Signal)
+	mpvExit := make(chan struct{})
 	signal.Notify(halt, os.Interrupt)
 	remote := new(Remote)
 	remote.Init(conn)
 	events, stop := conn.NewEventListener()
+	streamOk := true
+	running := true
 
 	// send the initial command to the server to signal the player is ready
 	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
 
+	// start receiving messages
 	go receiveStatus(stream, newStatus)
 
-	for {
+	// if mpv exits before player, then signal an exit to player
+	go func() {
+		conn.WaitUntilClosed()
+		close(mpvExit)
+	}()
+
+	for running {
 		select {
-		case status, ok := <-newStatus:
-			if ok {
-				handleNewStatus(status, remote)
+		case status, streamOk := <-newStatus:
+			if !streamOk {
+				running = false
+				break
 			}
+			handleNewStatus(status, remote)
+
+		case <-mpvExit:
+			running = false
+			break
 
 		case <-halt:
-			stop <- struct{}{}
-			stream.CloseSend()
-			remote.Quit()
-			return
+			running = false
+			break
 
 		case event := <-events:
 			if event.Name == "idle" {
 				stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
 			}
 		}
-
 	}
+
+	// tell the server we're exiting
+	if streamOk {
+		stream.CloseSend()
+	}
+
+	// clean up mpv connection
+	time.Sleep(100 * time.Millisecond)
+	if !conn.IsClosed() {
+		stop <- struct{}{}
+		remote.Quit()
+	}
+	conn.Close()
+
+	close(halt)
 }
 
 /*
@@ -205,15 +237,15 @@ func main() {
 	kingpin.Version("0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
+	conn, stream := connectToRemote()
+	defer conn.Close()
+
 	mpvCmd := startMpv()
 
 	mpvConn := mpv.NewConnection(mpvSocket)
 	if err := mpvConn.Open(); err != nil {
 		panic(err)
 	}
-
-	conn, stream := connectToRemote()
-	defer conn.Close()
 
 	interactionLoop(stream, mpvConn)
 

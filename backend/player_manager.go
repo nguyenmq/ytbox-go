@@ -27,7 +27,15 @@ const (
  */
 type playerMessage struct {
 	Id     int
-	Status bepb.PlayerStatus
+	Status *bepb.PlayerStatus
+}
+
+/*
+ * Keeps track of state data belonging to a player
+ */
+type playerState struct {
+	out  bepb.YtbBePlayer_SongPlayerServer
+	stop chan struct{}
 }
 
 /*
@@ -36,7 +44,7 @@ type playerMessage struct {
 type playerManager struct {
 	fanIn      chan playerMessage
 	fanOut     chan bepb.CommandType
-	streams    map[int]bepb.YtbBePlayer_SongPlayerServer
+	streams    map[int]*playerState
 	ready      map[int]bool
 	playerLock sync.RWMutex
 	streamIds  int
@@ -47,46 +55,52 @@ type playerManager struct {
  * Initialize the player manager. It still needs to be started after being
  * initialized.
  */
-func (mgr *playerManager) Init(queue sched.QueueScheduler) {
+func (mgr *playerManager) init(queue sched.QueueScheduler) {
 	mgr.fanIn = make(chan playerMessage)
 	mgr.fanOut = make(chan bepb.CommandType)
-	mgr.streams = make(map[int]bepb.YtbBePlayer_SongPlayerServer, 2)
+	mgr.streams = make(map[int]*playerState, 2)
 	mgr.ready = make(map[int]bool, 2)
 	mgr.streamIds = 0
 	mgr.queue = queue
 }
 
 /*
- * Append a player stream for the player to keep track of
+ * Add a player stream for the manager to keep track of. Returns a player id
+ * and a channel to signal stop
  */
-func (mgr *playerManager) Append(out bepb.YtbBePlayer_SongPlayerServer) int {
+func (mgr *playerManager) add(out bepb.YtbBePlayer_SongPlayerServer) (int, chan struct{}) {
 	mgr.playerLock.Lock()
 	defer mgr.playerLock.Unlock()
+
 	mgr.streamIds++
-	mgr.streams[mgr.streamIds] = out
+	state := new(playerState)
+	state.out = out
+	state.stop = make(chan struct{})
+
+	mgr.streams[mgr.streamIds] = state
 	mgr.ready[mgr.streamIds] = PLAYER_BUSY
 	log.Printf("New player %d", mgr.streamIds)
-	return mgr.streamIds
+	return mgr.streamIds, state.stop
 }
 
 /*
- * Fan in messages received from the remote players
+ * Receive messages from all remote players
  */
-func (mgr *playerManager) FanIn() chan<- playerMessage {
-	return mgr.fanIn
+func (mgr *playerManager) receiveFromPlayers(id int, status *bepb.PlayerStatus) {
+	mgr.fanIn <- playerMessage{Id: id, Status: status}
 }
 
 /*
- * Fan commands out to player clients
+ * Send commands to all player clients
  */
-func (mgr *playerManager) FanOut() chan<- bepb.CommandType {
-	return mgr.fanOut
+func (mgr *playerManager) sendToPlayers(cmd bepb.CommandType) {
+	mgr.fanOut <- cmd
 }
 
 /*
  * Remove a player stream that the player manager was keeping track of
  */
-func (mgr *playerManager) RemoveStream(id int) {
+func (mgr *playerManager) remove(id int) {
 	mgr.playerLock.Lock()
 	defer mgr.playerLock.Unlock()
 	delete(mgr.streams, id)
@@ -97,7 +111,7 @@ func (mgr *playerManager) RemoveStream(id int) {
 /*
  * Start the the player manager
  */
-func (mgr *playerManager) Start() {
+func (mgr *playerManager) start() {
 	go func() {
 		nextSong := make(chan bepb.PlayerControl)
 
@@ -111,8 +125,8 @@ func (mgr *playerManager) Start() {
 
 				log.Printf("Sending out command: %v", cmd)
 				mgr.playerLock.RLock()
-				for id, out := range mgr.streams {
-					go func() { out.Send(&bep) }()
+				for _, state := range mgr.streams {
+					go sendToStream(&bepb.PlayerControl{Command: cmd}, state.out)
 				}
 				mgr.playerLock.RUnlock()
 
@@ -140,8 +154,8 @@ func (mgr *playerManager) Start() {
 				// then reset their ready flags
 				if ok && control.GetCommand() == bepb.CommandType_Play {
 					mgr.playerLock.Lock()
-					for id, out := range mgr.streams {
-						go func() { out.Send(&control) }()
+					for id, state := range mgr.streams {
+						go sendToStream(&control, state.out)
 						mgr.ready[id] = PLAYER_BUSY
 					}
 					mgr.playerLock.Unlock()
@@ -178,9 +192,17 @@ func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
 }
 
 /*
- * Stop the player manager
+ * Stop the player manager and tell the goroutines listening on each stream to
+ * stop
  */
-func (mgr *playerManager) Stop() {
+func (mgr *playerManager) stop() {
+	mgr.playerLock.Lock()
+	defer mgr.playerLock.Unlock()
+
+	for _, state := range mgr.streams {
+		state.stop <- struct{}{}
+	}
+
 	close(mgr.fanIn)
 }
 
@@ -202,4 +224,11 @@ func (mgr *playerManager) playersReady() bool {
 	}
 
 	return allReady
+}
+
+/*
+ * Provides a goroutine for sending out the player control to the given stream
+ */
+func sendToStream(control *bepb.PlayerControl, out bepb.YtbBePlayer_SongPlayerServer) {
+	out.Send(control)
 }

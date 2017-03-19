@@ -10,10 +10,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
 	db "github.com/nguyenmq/ytbox-go/database"
@@ -36,6 +38,7 @@ type BackendServer struct {
 	dbManager db.DbManager         // database manager
 	userCache *UserCache           // user identity cache
 	playerMgr *playerManager       // player manager
+	streamWG  sync.WaitGroup       // wait group for streaming goroutines
 }
 
 /*
@@ -75,7 +78,7 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 
 	// initialize the player manager
 	server.playerMgr = new(playerManager)
-	server.playerMgr.Init(server.queue)
+	server.playerMgr.init(server.queue)
 
 	return server
 }
@@ -84,7 +87,7 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
  * Start the server
  */
 func (s *BackendServer) Serve() {
-	s.playerMgr.Start()
+	s.playerMgr.start()
 	s.beServer.Serve(s.listener)
 }
 
@@ -92,7 +95,13 @@ func (s *BackendServer) Serve() {
  * Stop the server
  */
 func (s *BackendServer) Stop() {
-	s.playerMgr.Stop()
+	// stop the player manager
+	s.playerMgr.stop()
+
+	// wait for all the rpc streaming connections to close
+	s.streamWG.Wait()
+
+	// stop the rpc server
 	s.beServer.GracefulStop()
 }
 
@@ -320,27 +329,34 @@ func (s *BackendServer) PauseSong(con context.Context, empty *cmpb.Empty) (*bepb
  * Stream RPC connection with the remote player client
  */
 func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) error {
-	var err error = nil
+	s.streamWG.Add(1)
+	defer s.streamWG.Done()
+	id, stop := s.playerMgr.add(stream)
 
-	id := s.playerMgr.Append(stream)
+	go func() {
+		for {
+			status, err := stream.Recv()
+			if err == io.EOF {
+				log.Printf("Disconnected from remote player")
+				break
+			}
 
-	for {
-		status, err := stream.Recv()
-		if err == io.EOF {
-			log.Printf("Disconnected from remote player")
-			err = nil
-			break
+			if grpc.Code(err) == codes.Canceled {
+				break
+			}
+
+			if err != nil {
+				log.Printf("Error receiving message from remote player: %v", err)
+				break
+			}
+
+			// write the received status to the player manager
+			s.playerMgr.receiveFromPlayers(id, status)
 		}
+		stop <- struct{}{}
+	}()
 
-		if err != nil {
-			log.Printf("Error receiving message from remote player: %v")
-			break
-		}
-
-		// write the received status to the player manager
-		s.playerMgr.FanIn() <- playerMessage{Id: id, Status: *status}
-	}
-
-	s.playerMgr.RemoveStream(id)
-	return err
+	<-stop
+	s.playerMgr.remove(id)
+	return nil
 }

@@ -4,3 +4,4 @@ logs
 notes.md
 *.pls
 bin/*
+**/cmd.txt
