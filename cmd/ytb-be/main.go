@@ -20,7 +20,7 @@ import (
  */
 var (
 	app      = kingpin.New(backend.LogPrefix, "yt_box backend server")
-	host     = app.Flag("host", "Address to listen on").Default("127.0.0.1").Short('h').String()
+	all      = app.Flag("all", "Listen on all interfaces. Only listens on localhost by default.").Short('a').Bool()
 	port     = app.Flag("port", "Port to listen on").Default("8000").Short('p').String()
 	loadFile = app.Flag("load", "Load a serialized protobuf playlist from a file").Short('l').ExistingFile()
 	dbFile   = app.Flag("database", "Path to database").Default("./ytbox.db").Short('d').String()
@@ -33,7 +33,12 @@ func main() {
 	logFile := common.InitLogger(backend.LogPrefix, true)
 	defer logFile.Close()
 
-	ytbServer := backend.NewServer(*host+":"+*port, *loadFile, *dbFile)
+	addr := "127.0.0.1"
+	if *all {
+		addr = "0.0.0.0"
+	}
+
+	ytbServer := backend.NewServer(addr+":"+*port, *loadFile, *dbFile)
 
 	go func() {
 		stop := make(chan os.Signal)

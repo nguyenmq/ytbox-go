@@ -32,8 +32,14 @@ var (
 	loginName = login.Arg("username", "Alias to login as.").Required().String()
 	loginId   = login.Arg("userId", "Id of the alias to login as.").Uint32()
 
+	// "next" subcommand
+	next = app.Command("next", "Skip to the next song.")
+
 	// "now" subcommand
 	now = app.Command("now", "Get the current song that is playing.").Default()
+
+	// "pause" subcommand
+	pause = app.Command("pause", "Toggle pause state of the player.")
 
 	// "pop" subcommand
 	pop = app.Command("pop", "Pop a song off the top of the queue.")
@@ -47,10 +53,10 @@ var (
 	save     = app.Command("save", "Save the current playlist to a file.")
 	saveFile = save.Arg("file", "File name to write playlist to").Required().String()
 
-	// "submit" subcommand
-	submit     = app.Command("submit", "Submit a link to the queue.").Alias("sub")
-	submitLink = submit.Arg("link", "Link to song.").Required().String()
-	submitUser = submit.Arg("user", "User id to submit link under.").Required().Uint32()
+	// "send" subcommand
+	send     = app.Command("send", "send a link to the queue.")
+	sendLink = send.Arg("link", "Link to song.").Required().String()
+	sendUser = send.Arg("user", "User id to send link under.").Required().Uint32()
 )
 
 /*
@@ -60,6 +66,8 @@ var (
 func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+	opts = append(opts, grpc.FailOnNonTempDialError(true))
 
 	conn, err := grpc.Dial(*remoteHost+":"+*remotePort, opts...)
 	if err != nil {
@@ -72,12 +80,12 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
 }
 
 /*
- * Handler to submit a song to the remote server
+ * Handler to send a song to the remote server
  */
-func submitCommand(client bepb.YtbBackendClient) {
-	response, err := client.SubmitSong(context.Background(), &bepb.Submission{*submitLink, *submitUser})
+func sendCommand(client bepb.YtbBackendClient) {
+	response, err := client.SendSong(context.Background(), &bepb.Submission{*sendLink, *sendUser})
 	if err != nil {
-		fmt.Printf("failed to call SubmitSong: %v\n", err)
+		fmt.Printf("failed to call SendSong: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -162,6 +170,26 @@ func nowCommand(client bepb.YtbBackendClient) {
 	}
 }
 
+func nextCommand(client bepb.YtbBackendClient) {
+	response, err := client.NextSong(context.Background(), &cmpb.Empty{})
+	if err != nil {
+		fmt.Printf("failed to call NextSong: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Response: {success: %t, message: %s}\n", response.GetSuccess(), response.GetMessage())
+}
+
+func pauseCommand(client bepb.YtbBackendClient) {
+	response, err := client.PauseSong(context.Background(), &cmpb.Empty{})
+	if err != nil {
+		fmt.Printf("failed to call PauseSong: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Response: {success: %t, message: %s}\n", response.GetSuccess(), response.GetMessage())
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -173,8 +201,8 @@ func main() {
 	case now.FullCommand():
 		nowCommand(client)
 
-	case submit.FullCommand():
-		submitCommand(client)
+	case send.FullCommand():
+		sendCommand(client)
 
 	case playlist.FullCommand():
 		playlistCommand(client)
@@ -190,6 +218,12 @@ func main() {
 
 	case remove.FullCommand():
 		removeCommand(client)
+
+	case next.FullCommand():
+		nextCommand(client)
+
+	case pause.FullCommand():
+		pauseCommand(client)
 
 	default:
 		nowCommand(client)

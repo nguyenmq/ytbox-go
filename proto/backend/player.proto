@@ -25,6 +25,7 @@ enum CommandType {
     Play  = 2; // Play song
     Next  = 3; // Skip to next song
     Stop  = 4; // Stop playing
+    Pause = 5; // Plause playback
 }
 
 // status reported back by the player

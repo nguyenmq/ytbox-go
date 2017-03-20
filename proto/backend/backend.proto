@@ -13,7 +13,7 @@ import "github.com/nguyenmq/ytbox-go/proto/common/common.proto";
 
 service YtbBackend {
     // Submit a song to the backend service to be added to the play queue
-    rpc SubmitSong(Submission) returns (Error) {}
+    rpc SendSong(Submission) returns (Error) {}
 
     // Remove a song from the playlist
     rpc RemoveSong(Eviction) returns (Error) {}

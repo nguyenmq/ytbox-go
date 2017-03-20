@@ -108,7 +108,7 @@ func (s *BackendServer) Stop() {
 /*
  * Receive a song from a remote client for appending to the play queue
  */
-func (s *BackendServer) SubmitSong(con context.Context, sub *bepb.Submission) (*bepb.Error, error) {
+func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*bepb.Error, error) {
 	response := &bepb.Error{Success: false}
 	log.Printf("Submission: {link: %s, userId: %d}\n", sub.Link, sub.UserId)
 
@@ -314,7 +314,10 @@ func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*
  * player
  */
 func (s *BackendServer) NextSong(con context.Context, empty *cmpb.Empty) (*bepb.Error, error) {
-	return &bepb.Error{}, nil
+	nextSong := s.queue.PopQueue()
+	control := &bepb.PlayerControl{Command: bepb.CommandType_Next, Song: nextSong}
+	s.playerMgr.sendToPlayers(control)
+	return &bepb.Error{Success: true, Message: "Success"}, nil
 }
 
 /*
@@ -322,7 +325,8 @@ func (s *BackendServer) NextSong(con context.Context, empty *cmpb.Empty) (*bepb.
  * player
  */
 func (s *BackendServer) PauseSong(con context.Context, empty *cmpb.Empty) (*bepb.Error, error) {
-	return &bepb.Error{}, nil
+	s.playerMgr.sendToPlayers(&bepb.PlayerControl{Command: bepb.CommandType_Pause})
+	return &bepb.Error{Success: true, Message: "Success"}, nil
 }
 
 /*

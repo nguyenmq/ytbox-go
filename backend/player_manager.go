@@ -43,7 +43,7 @@ type playerState struct {
  */
 type playerManager struct {
 	fanIn      chan playerMessage
-	fanOut     chan bepb.CommandType
+	fanOut     chan *bepb.PlayerControl
 	streams    map[int]*playerState
 	ready      map[int]bool
 	playerLock sync.RWMutex
@@ -57,7 +57,7 @@ type playerManager struct {
  */
 func (mgr *playerManager) init(queue sched.QueueScheduler) {
 	mgr.fanIn = make(chan playerMessage)
-	mgr.fanOut = make(chan bepb.CommandType)
+	mgr.fanOut = make(chan *bepb.PlayerControl)
 	mgr.streams = make(map[int]*playerState, 2)
 	mgr.ready = make(map[int]bool, 2)
 	mgr.streamIds = 0
@@ -93,8 +93,8 @@ func (mgr *playerManager) receiveFromPlayers(id int, status *bepb.PlayerStatus) 
 /*
  * Send commands to all player clients
  */
-func (mgr *playerManager) sendToPlayers(cmd bepb.CommandType) {
-	mgr.fanOut <- cmd
+func (mgr *playerManager) sendToPlayers(control *bepb.PlayerControl) {
+	mgr.fanOut <- control
 }
 
 /*
@@ -117,16 +117,16 @@ func (mgr *playerManager) start() {
 
 		for {
 			select {
-			case cmd, ok := <-mgr.fanOut:
+			case control, ok := <-mgr.fanOut:
 				if !ok {
 					close(nextSong)
 					return
 				}
 
-				log.Printf("Sending out command: %v", cmd)
+				log.Printf("Sending out command: %v", control.GetCommand())
 				mgr.playerLock.RLock()
 				for _, state := range mgr.streams {
-					go sendToStream(&bepb.PlayerControl{Command: cmd}, state.out)
+					go sendToStream(control, state.out)
 				}
 				mgr.playerLock.RUnlock()
 

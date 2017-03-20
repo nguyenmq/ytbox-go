@@ -48,8 +48,14 @@ func (r *Remote) Init(conn *mpv.Connection) {
 /*
  * Load a song into mpv
  */
-func (r *Remote) LoadSong(name string) {
-	_, err := r.conn.Call("loadfile", name, "append-play")
+func (r *Remote) LoadSong(name string, play bool) {
+	var err error
+	if play {
+		_, err = r.conn.Call("loadfile", name, "append-play")
+	} else {
+		_, err = r.conn.Call("loadfile", name, "append")
+	}
+
 	if err != nil {
 		fmt.Printf("Failed to load song: %v\n", err)
 	}
@@ -62,6 +68,49 @@ func (r *Remote) TogglePause() {
 	_, err := r.conn.Call("cycle", "pause", "up")
 	if err != nil {
 		fmt.Printf("Failed to toggle pause: %v\n", err)
+	}
+}
+
+/*
+ * Force pause to a certain state
+ */
+func (r *Remote) ForcePause(state bool) {
+	_, err := r.conn.Call("set_property", "pause", state)
+	if err != nil {
+		fmt.Printf("Failed to pause: %v\n", err)
+	}
+}
+
+/*
+ * Get the number of tracks in mpv's playlist
+ */
+func (r *Remote) GetPlaylistCount() float64 {
+	count, err := r.conn.Get("playlist-count")
+	if err != nil {
+		fmt.Printf("Failed to pause: %v\n", err)
+		return 0
+	}
+
+	return count.(float64)
+}
+
+/*
+ * Go to the next song
+ */
+func (r *Remote) Next(name string) {
+	if name != "" {
+		r.LoadSong(name, true)
+	}
+
+	// a new player should have one track in the playlist. Players who are
+	// already playing should have two
+	if r.GetPlaylistCount() > 1.0 {
+		_, err := r.conn.Call("playlist-next", "force")
+		if err != nil {
+			fmt.Printf("Failed to go to next song: %v\n", err)
+		} else {
+			r.ForcePause(false)
+		}
 	}
 }
 
@@ -131,8 +180,21 @@ func receiveStatus(stream bepb.YtbBePlayer_SongPlayerClient, newStatus chan *bep
 func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 	fmt.Printf("Received: %v\n", status)
 
-	if status.Command == bepb.CommandType_Play {
-		playSong(status.Song, remote)
+	switch status.GetCommand() {
+	case bepb.CommandType_Play:
+		link, ok := buildSongLink(status.GetSong())
+		if ok {
+			remote.LoadSong(link, true)
+		}
+
+	case bepb.CommandType_Next:
+		// link can be an empty string. We still want to stop the player even
+		// if there are no more songs in the playlist
+		link, _ := buildSongLink(status.GetSong())
+		remote.Next(link)
+
+	case bepb.CommandType_Pause:
+		remote.TogglePause()
 	}
 }
 
@@ -203,23 +265,28 @@ func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient, conn *mpv.Connect
 }
 
 /*
- * Build the song link and play the given song
+ * Build the song link
  */
-func playSong(song *cmpb.Song, remote *Remote) {
-	var link string
+func buildSongLink(song *cmpb.Song) (string, bool) {
+	link := ""
+	ok := true
 
-	switch song.Service {
+	switch song.GetService() {
 	case cmpb.ServiceType_ServiceLocal:
-		link = song.ServiceId
+		link = song.GetServiceId()
 
 	case cmpb.ServiceType_ServiceYoutube:
-		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.ServiceId)
+		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.GetServiceId())
+
+	case cmpb.ServiceType_ServiceNone:
+		ok = false
 
 	default:
-		fmt.Printf("Unsupported link: %s\n", song.ServiceId)
+		fmt.Printf("Unsupported link: %s\n", song.GetServiceId())
+		ok = false
 	}
 
-	remote.LoadSong(link)
+	return link, ok
 }
 
 /*
