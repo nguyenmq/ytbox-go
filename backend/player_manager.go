@@ -12,7 +12,7 @@ import (
 	"log"
 	"sync"
 
-	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
+	queuer "github.com/nguyenmq/ytbox-go/backend/song_queuer"
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 )
 
@@ -48,14 +48,14 @@ type playerManager struct {
 	ready      map[int]bool
 	playerLock sync.RWMutex
 	streamIds  int
-	queue      sched.QueueScheduler
+	queue      queuer.SongQueuer
 }
 
 /*
  * Initialize the player manager. It still needs to be started after being
  * initialized.
  */
-func (mgr *playerManager) init(queue sched.QueueScheduler) {
+func (mgr *playerManager) init(queue queuer.SongQueuer) {
 	mgr.fanIn = make(chan playerMessage)
 	mgr.fanOut = make(chan *bepb.PlayerControl)
 	mgr.streams = make(map[int]*playerState, 2)

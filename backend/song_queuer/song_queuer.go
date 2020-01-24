@@ -2,7 +2,7 @@
  * This file describes the types and interfaces used by yt_box backend
  */
 
-package scheduler
+package song_queue
 
 import (
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
@@ -10,11 +10,9 @@ import (
 )
 
 /*
- * Interface to a queue scheduler. A queue scheduler represents a queue of
- * songs. The queue has the ability to prioritize the song in the queue however
- * it sees fit.
+ * A SongQueuer maintains a list of songs.
  */
-type QueueScheduler interface {
+type SongQueuer interface {
 	// Add a song to the queue
 	AddSong(song *cmpb.Song)
 

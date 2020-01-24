@@ -1,8 +1,8 @@
 /*
- * Implements a first-in-first-out song queue
+ * Implements a first-in-first-out SongQueuer
  */
 
-package scheduler
+package song_queue
 
 import (
 	"container/list"
@@ -21,7 +21,7 @@ import (
 /*
  * Contains the state data for the queue
  */
-type FifoQueue struct {
+type FifoQueuer struct {
 	playQueue  *list.List    // the playlist of songs
 	lock       *sync.RWMutex // read/write lock on the playlist
 	npLock     *sync.Mutex   // lock on the now playing value
@@ -33,7 +33,7 @@ type FifoQueue struct {
 /*
  * Adds a song to the queue
  */
-func (fifo *FifoQueue) AddSong(song *cmpb.Song) {
+func (fifo *FifoQueuer) AddSong(song *cmpb.Song) {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 	fifo.playQueue.PushBack(song)
@@ -46,7 +46,7 @@ func (fifo *FifoQueue) AddSong(song *cmpb.Song) {
 /*
  * Initializes the queue
  */
-func (fifo *FifoQueue) Init() {
+func (fifo *FifoQueuer) Init() {
 	fifo.playQueue = list.New()
 	fifo.lock = new(sync.RWMutex)
 	fifo.npLock = new(sync.Mutex)
@@ -57,7 +57,7 @@ func (fifo *FifoQueue) Init() {
 /*
  * Returns the length of the queue
  */
-func (fifo *FifoQueue) Len() int {
+func (fifo *FifoQueuer) Len() int {
 	fifo.lock.RLock()
 	defer fifo.lock.RUnlock()
 	return fifo.playQueue.Len()
@@ -66,7 +66,7 @@ func (fifo *FifoQueue) Len() int {
 /*
  * Returns the data for the currently playing song
  */
-func (fifo *FifoQueue) NowPlaying() *cmpb.Song {
+func (fifo *FifoQueuer) NowPlaying() *cmpb.Song {
 	fifo.npLock.Lock()
 	defer fifo.npLock.Unlock()
 
@@ -76,7 +76,7 @@ func (fifo *FifoQueue) NowPlaying() *cmpb.Song {
 /*
  * Returns a list of songs in the queue
  */
-func (fifo *FifoQueue) GetPlaylist() *bepb.Playlist {
+func (fifo *FifoQueuer) GetPlaylist() *bepb.Playlist {
 	songs := make([]*cmpb.Song, fifo.playQueue.Len())
 	var idx int = 0
 
@@ -96,7 +96,7 @@ func (fifo *FifoQueue) GetPlaylist() *bepb.Playlist {
  * will notify all blocked threads that the size is once again greater than one
  * when a new song is added.
  */
-func (fifo *FifoQueue) WaitForMoreSongs() {
+func (fifo *FifoQueuer) WaitForMoreSongs() {
 	fifo.cond.L.Lock()
 	for fifo.Len() == 0 {
 		fifo.cond.Wait()
@@ -107,7 +107,7 @@ func (fifo *FifoQueue) WaitForMoreSongs() {
 /*
  * Pops the next song off the queue and returns it
  */
-func (fifo *FifoQueue) PopQueue() *cmpb.Song {
+func (fifo *FifoQueuer) PopQueue() *cmpb.Song {
 	var front *cmpb.Song = nil
 
 	fifo.npLock.Lock()
@@ -130,7 +130,7 @@ func (fifo *FifoQueue) PopQueue() *cmpb.Song {
  * Removes the identified song from the queue. Both the song id and uesr id
  * must match in order for the song to be successfully removed.
  */
-func (fifo *FifoQueue) RemoveSong(songId uint32, userId uint32) error {
+func (fifo *FifoQueuer) RemoveSong(songId uint32, userId uint32) error {
 	fifo.lock.Lock()
 	defer fifo.lock.Unlock()
 
@@ -154,7 +154,7 @@ func (fifo *FifoQueue) RemoveSong(songId uint32, userId uint32) error {
 /*
  * Saves the playlist to a file
  */
-func (fifo *FifoQueue) SavePlaylist(path string) error {
+func (fifo *FifoQueuer) SavePlaylist(path string) error {
 	playlist := fifo.GetPlaylist()
 
 	out, err := proto.Marshal(playlist)

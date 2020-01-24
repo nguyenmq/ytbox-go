@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	sched "github.com/nguyenmq/ytbox-go/backend/scheduler"
+	queuer "github.com/nguyenmq/ytbox-go/backend/song_queuer"
 	db "github.com/nguyenmq/ytbox-go/database"
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
@@ -32,13 +32,13 @@ const (
  * Implements the backend rpc server interface
  */
 type BackendServer struct {
-	listener  net.Listener         // network listener
-	beServer  *grpc.Server         // backend RPC server
-	queue     sched.QueueScheduler // playlist queue
-	dbManager db.DbManager         // database manager
-	userCache *UserCache           // user identity cache
-	playerMgr *playerManager       // player manager
-	streamWG  sync.WaitGroup       // wait group for streaming goroutines
+	listener  net.Listener      // network listener
+	beServer  *grpc.Server      // backend RPC server
+	queue     queuer.SongQueuer // playlist queue
+	dbManager db.DbManager      // database manager
+	userCache *UserCache        // user identity cache
+	playerMgr *playerManager    // player manager
+	streamWG  sync.WaitGroup    // wait group for streaming goroutines
 }
 
 /*
@@ -60,7 +60,7 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 	bepb.RegisterYtbBePlayerServer(server.beServer, server)
 
 	// initialize the song queue
-	server.queue = new(sched.FifoQueue)
+	server.queue = new(queuer.FifoQueuer)
 	server.queue.Init()
 
 	// initialize the database manager

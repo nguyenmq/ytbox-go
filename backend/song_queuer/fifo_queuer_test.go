@@ -1,4 +1,4 @@
-package scheduler
+package song_queue
 
 import (
 	"testing"
@@ -35,7 +35,7 @@ func compareSongs(first *pb.Song, second *pb.Song) bool {
  * Tests an empty queue
  */
 func TestEmptyQueue(t *testing.T) {
-	var fifo FifoQueue
+	var fifo FifoQueuer
 	fifo.Init()
 
 	var nextSong *pb.Song = fifo.PopQueue()
@@ -48,7 +48,7 @@ func TestEmptyQueue(t *testing.T) {
  * Tests a queue with a single item
  */
 func TestOneQueue(t *testing.T) {
-	var fifo FifoQueue
+	var fifo FifoQueuer
 	fifo.Init()
 
 	fifo.AddSong(&sampleSongs[0])
@@ -70,7 +70,7 @@ func TestOneQueue(t *testing.T) {
  * Tests a queue with many items
  */
 func TestManyQueue(t *testing.T) {
-	var fifo FifoQueue
+	var fifo FifoQueuer
 	var nextSong *pb.Song
 	fifo.Init()
 
