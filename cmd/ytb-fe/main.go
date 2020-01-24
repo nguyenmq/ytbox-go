@@ -1,0 +1,54 @@
+/*
+ * Entry point into the yt_box backend service
+ */
+
+package main
+
+import (
+	"log"
+	"os"
+	"os/signal"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/nguyenmq/ytbox-go/common"
+	"github.com/nguyenmq/ytbox-go/frontend"
+)
+
+/*
+ * Command line arguments
+ */
+var (
+	app  = kingpin.New(frontend.LogPrefix, "yt_box frontend server")
+	all  = app.Flag("all", "Listen on all interfaces. Only listens on localhost by default.").Short('a').Bool()
+	port = app.Flag("port", "Port to listen on").Default("9008").Short('p').String()
+)
+
+func main() {
+	app.Version("0.1")
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	logFile := common.InitLogger(frontend.LogPrefix, true)
+	defer logFile.Close()
+
+	addr := "127.0.0.1"
+	if *all {
+		addr = "0.0.0.0"
+	}
+
+	server := frontend.NewServer(addr + ":" + *port)
+
+	go func() {
+		stop := make(chan os.Signal)
+		signal.Notify(stop, os.Interrupt)
+
+		select {
+		case <-stop:
+			server.Stop()
+		}
+	}()
+
+	log.Println("Server started")
+	server.Start()
+	log.Println("Server stopped")
+}

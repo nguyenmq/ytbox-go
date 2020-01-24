@@ -16,7 +16,7 @@ Use `go get` to obtain the following libraries:
 Install [protobuf](https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-protocol-buffers)
 and the Go plugin. Build the `.proto` files:
 ```
-protoc -I proto/backend --go_out=plugins=grpc:proto/backend proto/backend/backend.proto
+protoc -I proto/backend -I "$GOPATH/src" --go_out=plugins=grpc:proto/backend proto/backend/backend.proto
 ```
 
 Install `youtube-dl` and `mpv`.
