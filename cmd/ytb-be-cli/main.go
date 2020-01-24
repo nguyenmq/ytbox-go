@@ -60,7 +60,7 @@ var (
 )
 
 /*
- * Connect to the remote server. Remember to close the returned connect when
+ * Connect to the remote server. Remember to close the returned connection when
  * done.
  */
 func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
