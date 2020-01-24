@@ -294,7 +294,7 @@ func buildSongLink(song *cmpb.Song) (string, bool) {
  */
 func startMpv() *exec.Cmd {
 	socketFlag := "--input-ipc-server=" + mpvSocket
-	cmd := exec.Command("mpv", "--idle", socketFlag, "--fullscreen", "--force-window")
+	cmd := exec.Command("mpv", "--idle", socketFlag, "--fullscreen", "--force-window", "--no-osc")
 	cmd.Start()
 	time.Sleep(500 * time.Millisecond)
 	return cmd

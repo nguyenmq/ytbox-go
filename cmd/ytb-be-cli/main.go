@@ -166,7 +166,8 @@ func nowCommand(client bepb.YtbBackendClient) {
 	if song.SongId == 0 {
 		fmt.Println("No song is currently playing")
 	} else {
-		fmt.Printf("Now playing: { %v}\n", song)
+		fmt.Printf("Now Playing: { id: %2d, user: %2d, title: %s }\n",
+			song.SongId, song.UserId, song.Title)
 	}
 }
 
