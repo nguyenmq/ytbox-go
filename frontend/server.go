@@ -70,15 +70,23 @@ func (s *FrontendServer) Stop() {
 func (s *FrontendServer) HandleIndex(context *gin.Context) {
 	title := "No Song is currently playing"
 
-	song, err := s.client.GetNowPlaying()
+	current_song, err := s.client.GetNowPlaying()
+	has_song_playing := current_song.SongId != 0
 
-	if err == nil && song.SongId != 0 {
-		title = song.Title
+	if err == nil && has_song_playing {
+		title = current_song.Title
 	}
 
+	playlist, err := s.client.GetPlaylist()
+
 	context.HTML(http.StatusOK, "index", gin.H{
-		"title":       "yt-box Song Queue",
-		"now_playing": title,
+		"title":            "yt-box Song Queue",
+		"now_playing":      title,
+		"has_song_playing": has_song_playing,
+		"user_name":        current_song.Username,
+		"video_id":         current_song.ServiceId,
+		"song_count":       len(playlist.Songs),
+		"queue":            playlist.Songs,
 	})
 }
 

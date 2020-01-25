@@ -1,0 +1,35 @@
+<div class="row queue_header">
+    <ul>
+        <li><span id="loading" class="small glyphicon glyphicon-refresh" aria-hidden="true"></span></li>
+        <li><h2 id="queue_title"> Video Queue <small>({{.song_count}})</small></h2></li>
+    </ul>
+</div>
+
+<table class="table table-condensed table-striped">
+    <tbody>
+        {{range $index, $song := .queue}}
+        <tr class="vid_row" >
+            <td class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">
+                {{$index}}.
+            </td>
+            <td>
+                <p class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">{{$song.Title}}</p>
+                <dl class="collapse" id="vid_{{$index}}">
+                    <dt>
+                        Submitted by {{$song.Username}}
+                    </dt>
+                    <dt class="queue_tool">
+                        <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{$song.ServiceId}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></li>
+                        <li><button id="{{$song.ServiceId}}" type="button" class="btn btn-default queue_rm"><span class="glyphicon glyphicon-remove"></span></button></li>
+                    </dt>
+                </dl>
+            </td>
+            <td class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">
+                <span class="queue_song_hint glyphicon glyphicon-collapse-down"></span>
+            </td>
+
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+

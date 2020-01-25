@@ -87,6 +87,7 @@ a {
     overflow: hidden;
     text-overflow: ellipsis;
     transition: height 0.5s ease;
+    font-size: 36px;
 }
 
 #np_song {
@@ -172,6 +173,15 @@ a {
     /* display: inline; */
     margin-bottom: 6pt;
     max-height: 16pt;
+}
+
+#banner_detail {
+    font-size: 11pt;
+}
+
+#banner_detail .btn {
+    font-size: 9pt !important;
+    padding: 5px 10px !important;
 }
 
 #user_opt {

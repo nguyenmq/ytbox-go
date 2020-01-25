@@ -2,6 +2,12 @@
     <title>{{.title}}</title>
 {{end}}
 
-{{define "content"}}
-    <p>this is a test</p>
+{{define "now_playing"}}
+    {{include "layouts/now_playing"}}
+{{end}}
+
+{{define "song_queue"}}
+    <div class="row" id="queue_container">
+        {{include "layouts/queue"}}
+    </div>
 {{end}}

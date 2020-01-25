@@ -13,10 +13,10 @@
     <body>
         <div class="container">
             <div id="banner" class="row">
-                {{include "layouts/now_playing"}}
+                {{template "now_playing" .}}
             </div>
 
-            {{template "content" .}}
+            {{template "song_queue" .}}
         </div>
     </body>
 </html>
