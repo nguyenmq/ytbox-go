@@ -1,9 +1,18 @@
 {{define "head"}}
+    <script src="/static/js/behavior.js" type="text/javascript"></script>
     <title>{{.title}}</title>
 {{end}}
 
 {{define "now_playing"}}
     {{include "layouts/now_playing"}}
+{{end}}
+
+{{define "button_label"}}
+    Enter a YouTube Link:
+{{end}}
+
+{{define "button_type"}}
+    <button id="submit_btn" class="btn-default btn-lg">Submit Link</button>
 {{end}}
 
 {{define "song_queue"}}
