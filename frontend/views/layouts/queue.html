@@ -10,7 +10,7 @@
         {{range $index, $song := .queue}}
         <tr class="vid_row" >
             <td class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">
-                {{$index}}.
+                {{call $.increment_index $index}}.
             </td>
             <td>
                 <p class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">{{$song.Title}}</p>

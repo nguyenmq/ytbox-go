@@ -48,6 +48,7 @@ func NewServer(addr string) *FrontendServer {
 	frontend.router.GET("/", frontend.HandleIndex)
 	frontend.router.GET("/playlist", frontend.HandlePlaylist)
 	frontend.router.POST("/new_song", frontend.HandleNewSong)
+	frontend.router.GET("/now_playing", frontend.HandleNowPlaying)
 	frontend.router.GET("/ping", func(context *gin.Context) {
 		context.String(http.StatusOK, "pong")
 	})
@@ -68,7 +69,7 @@ func (s *FrontendServer) Stop() {
 }
 
 func (s *FrontendServer) HandleIndex(context *gin.Context) {
-	title := "No Song is currently playing"
+	title := "No song is currently playing"
 
 	current_song, err := s.client.GetNowPlaying()
 	has_song_playing := current_song.SongId != 0
@@ -87,6 +88,9 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 		"video_id":         current_song.ServiceId,
 		"song_count":       len(playlist.Songs),
 		"queue":            playlist.Songs,
+		"increment_index": func(index int) int {
+			return index + 1
+		},
 	})
 }
 
@@ -118,4 +122,21 @@ func (s *FrontendServer) HandleNewSong(context *gin.Context) {
 	} else {
 		context.String(http.StatusOK, "Success")
 	}
+}
+
+func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
+	title := "No song is currently playing"
+
+	current_song, err := s.client.GetNowPlaying()
+	has_song_playing := current_song.SongId != 0
+
+	if err == nil && has_song_playing {
+		title = current_song.Title
+	}
+
+	context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
+		"now_playing": title,
+		"user_name":   current_song.Username,
+		"video_id":    current_song.ServiceId,
+	})
 }

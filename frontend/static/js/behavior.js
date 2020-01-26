@@ -11,7 +11,7 @@ $(document).ready(function(){
         $("#submit_btn").text("Submitting");
 
         $.ajax({
-            url: "/add",
+            url: "/new_song",
             type: "POST",
             data: $("input"),
             error: function(jqXHR, textStatus, errorThrown) {
@@ -131,10 +131,10 @@ $(document).ready(function(){
         });
 
         // toggle the chevron orientation
-        $("#banner_detail").on('shown.bs.collapse', function(event) {
-            $("#chevron").toggleClass("glyphicon-chevron-down");
-            $("#chevron").toggleClass("glyphicon-chevron-up");
-        });
+        //$("#banner_detail").on('shown.bs.collapse', function(event) {
+        //    $("#chevron").toggleClass("glyphicon-chevron-down");
+        //    $("#chevron").toggleClass("glyphicon-chevron-up");
+        //});
 
         // truncate the song title
         $("#banner_detail").on('hide.bs.collapse', function(event) {
@@ -149,10 +149,10 @@ $(document).ready(function(){
         });
 
         // toggle the chevron orientation
-        $("#banner_detail").on('hidden.bs.collapse', function(event) {
-            $("#chevron").toggleClass("glyphicon-chevron-up");
-            $("#chevron").toggleClass("glyphicon-chevron-down");
-        });
+        //$("#banner_detail").on('hidden.bs.collapse', function(event) {
+        //    $("#chevron").toggleClass("glyphicon-chevron-up");
+        //    $("#chevron").toggleClass("glyphicon-chevron-down");
+        //});
     }
 
     /*----------------------------------------------------------------
