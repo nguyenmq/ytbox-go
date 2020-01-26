@@ -1,17 +1,12 @@
-<div id="np" class="jumbotron" data-target="#banner_detail">
+<div id="np" class="jumbotron" data-toggle="collapse" data-target="#banner_detail">
     <img src="/static/img/ytbox_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
     <h2 id="np_placeholder">{{.now_playing}}</h2>
     <h2 id="np_song" class="extend">{{.now_playing}}</h2>
     {{if .has_song_playing}}
-        <div id="banner_detail">
-            <tr>
-                <td>
-                    <a class="btn btn-default" href="https://www.youtube.com/watch?v={{.video_id}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a>
-                </td>
-                <td>
-                    Submitted by {{.user_name}}
-                </td>
-            </tr>
+        <div id="banner_detail" class="collapse">
+            <p>Submitted by {{.user_name}}</p>
+            <p><a class="btn btn-default" href="https://www.youtube.com/watch?v={{.video_id}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></p>
         </div>
+        <p id="banner_chevron"><span id="chevron" class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span></p>
     {{end}}
 </div>
