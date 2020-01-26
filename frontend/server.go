@@ -14,6 +14,8 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 const (
@@ -21,18 +23,16 @@ const (
 )
 
 type FrontendServer struct {
-	addr   string            // ip address and port to listen on
-	client *BackendClient    // the backend client
-	router *gin.Engine       // gin router
-	server *http.Server      // http server
-	store  cookie.Store      // session cookie store
-	users  map[uint32]string // map of logged in users
+	addr   string         // ip address and port to listen on
+	client *BackendClient // the backend client
+	router *gin.Engine    // gin router
+	server *http.Server   // http server
+	store  cookie.Store   // session cookie store
 }
 
 func NewServer(addr string) *FrontendServer {
 	frontend := new(FrontendServer)
 	frontend.addr = addr
-	frontend.users = make(map[uint32]string)
 	frontend.store = cookie.NewStore([]byte("tmp_secret"))
 	frontend.store.Options(sessions.Options{
 		MaxAge: 0,
@@ -99,15 +99,21 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 
 		playlist, err := s.client.GetPlaylist()
 
+		user_name := s.TransformUsername(current_song, session.Get("user_id").(uint32))
+		user_id := session.Get("user_id").(uint32)
+
 		context.HTML(http.StatusOK, "index", gin.H{
-			"title":            "yt-box: Song Queue",
-			"now_playing":      title,
-			"has_song_playing": has_song_playing,
-			"user_name":        current_song.Username,
-			"video_id":         current_song.ServiceId,
-			"song_count":       len(playlist.Songs),
-			"queue":            playlist.Songs,
-			"increment_index":  increment_index,
+			"title":                "yt-box: Song Queue",
+			"now_playing":          title,
+			"has_song_playing":     has_song_playing,
+			"user_name":            user_name,
+			"video_id":             current_song.ServiceId,
+			"song_count":           len(playlist.Songs),
+			"queue":                playlist.Songs,
+			"session_user_id":      user_id,
+			"increment_index":      increment_index,
+			"transform_user_name":  s.TransformUsername,
+			"matches_session_user": s.MatchesSessionUser,
 		})
 	}
 }
@@ -115,13 +121,19 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 	playlist, err := s.client.GetPlaylist()
 
+	session := sessions.Default(context)
+	user_id := session.Get("user_id").(uint32)
+
 	if err != nil {
 		context.String(http.StatusInternalServerError, "Failed to retrieve playlist")
 	} else {
 		context.HTML(http.StatusOK, "layouts/queue.html", gin.H{
-			"song_count":      len(playlist.Songs),
-			"queue":           playlist.Songs,
-			"increment_index": increment_index,
+			"song_count":           len(playlist.Songs),
+			"queue":                playlist.Songs,
+			"session_user_id":      user_id,
+			"increment_index":      increment_index,
+			"transform_user_name":  s.TransformUsername,
+			"matches_session_user": s.MatchesSessionUser,
 		})
 	}
 }
@@ -134,7 +146,10 @@ func (s *FrontendServer) HandleNewSong(context *gin.Context) {
 		return
 	}
 
-	_, err := s.client.SendNewSong(link, 7)
+	session := sessions.Default(context)
+	user_id := session.Get("user_id").(uint32)
+
+	_, err := s.client.SendNewSong(link, user_id)
 	if err != nil {
 		context.String(http.StatusInternalServerError, "Failed to submit song")
 	} else {
@@ -152,10 +167,13 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 		title = current_song.Title
 	}
 
+	session := sessions.Default(context)
+	user_name := s.TransformUsername(current_song, session.Get("user_id").(uint32))
+
 	context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
 		"now_playing":      title,
 		"has_song_playing": has_song_playing,
-		"user_name":        current_song.Username,
+		"user_name":        user_name,
 		"video_id":         current_song.ServiceId,
 	})
 }
@@ -170,8 +188,10 @@ func (s *FrontendServer) HandleRemove(context *gin.Context) {
 	}
 
 	song_id, err := strconv.ParseUint(song_id_str, 10, 32)
+	session := sessions.Default(context)
+	user_id := session.Get("user_id").(uint32)
 
-	_, err = s.client.RemoveSong(uint32(song_id), 7)
+	_, err = s.client.RemoveSong(uint32(song_id), user_id)
 	if err != nil {
 		context.String(http.StatusInternalServerError, "Failed to remove song")
 	} else {
@@ -200,13 +220,24 @@ func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
 		return
 	}
 
-	s.users[user.UserId] = user.Username
 	session := sessions.Default(context)
 	session.Set("user_id", user.UserId)
 	session.Save()
 	context.Request.Method = "GET"
 	context.Request.URL.Path = "/"
 	s.router.HandleContext(context)
+}
+
+func (s *FrontendServer) TransformUsername(song *cmpb.Song, session_user_id uint32) string {
+	if song.UserId == session_user_id {
+		return "You"
+	} else {
+		return song.Username
+	}
+}
+
+func (s *FrontendServer) MatchesSessionUser(user_id uint32, session_user_id uint32) bool {
+	return user_id == session_user_id
 }
 
 func increment_index(index int) int {

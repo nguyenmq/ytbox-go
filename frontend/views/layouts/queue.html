@@ -16,11 +16,13 @@
                 <p class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">{{$song.Title}}</p>
                 <dl class="collapse" id="vid_{{$index}}">
                     <dt>
-                        Submitted by {{$song.Username}}
+                        Submitted by {{call $.transform_user_name $song $.session_user_id}}
                     </dt>
                     <dt class="queue_tool">
                         <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{$song.ServiceId}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></li>
+                        {{if call $.matches_session_user $song.UserId $.session_user_id}}
                         <li><button id="{{$song.SongId}}" type="button" class="btn btn-default queue_rm"><span class="glyphicon glyphicon-remove"></span></button></li>
+                        {{end}}
                     </dt>
                 </dl>
             </td>
