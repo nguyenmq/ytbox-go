@@ -71,3 +71,18 @@ func (c *BackendClient) GetNowPlaying() (*cmpb.Song, error) {
 
 	return song, err
 }
+
+func (c *BackendClient) RemoveSong(song_id uint32, user_id uint32) (*bepb.Error, error) {
+	var eviction = bepb.Eviction{
+		SongId: song_id,
+		UserId: user_id,
+	}
+
+	response, err := c.be_client.RemoveSong(context.Background(), &eviction)
+
+	if err != nil {
+		log.Printf("Failed to remove song with error: %v\n", err)
+	}
+
+	return response, err
+}

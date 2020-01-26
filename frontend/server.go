@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-gonic/gin"
@@ -49,6 +50,7 @@ func NewServer(addr string) *FrontendServer {
 	frontend.router.GET("/playlist", frontend.HandlePlaylist)
 	frontend.router.POST("/new_song", frontend.HandleNewSong)
 	frontend.router.GET("/now_playing", frontend.HandleNowPlaying)
+	frontend.router.POST("/remove", frontend.HandleRemove)
 	frontend.router.GET("/ping", func(context *gin.Context) {
 		context.String(http.StatusOK, "pong")
 	})
@@ -138,6 +140,25 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 		"user_name":        current_song.Username,
 		"video_id":         current_song.ServiceId,
 	})
+}
+
+func (s *FrontendServer) HandleRemove(context *gin.Context) {
+	// todo: get user id from session
+	song_id_str, exists := context.GetPostForm("song_id")
+
+	if exists == false {
+		context.String(http.StatusBadRequest, "Did not get a song to delete")
+		return
+	}
+
+	song_id, err := strconv.ParseUint(song_id_str, 10, 32)
+
+	_, err = s.client.RemoveSong(uint32(song_id), 7)
+	if err != nil {
+		context.String(http.StatusInternalServerError, "Failed to remove song")
+	} else {
+		context.String(http.StatusOK, "Success")
+	}
 }
 
 func increment_index(index int) int {

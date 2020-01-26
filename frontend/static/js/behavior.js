@@ -98,7 +98,7 @@ $(document).ready(function(){
         $.ajax({
             url: "/remove",
             type: "POST",
-            data: { 'vid_id' : event.currentTarget.id },
+            data: { 'song_id' : event.currentTarget.id },
             error: function(jqXHR, textStatus, errorThrown) {
                 if(jqXHR.status == 500) {
                     $("#alert_area").empty();
