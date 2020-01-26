@@ -65,7 +65,7 @@ $(document).ready(function(){
 
                 // Make the ajax call refresh the queue
                 $.ajax({
-                    url: "/queue",
+                    url: "/playlist",
                     type: "GET",
                     dataType: "html",
                     error: function(jqXHR, textStatus, errorThrown) {

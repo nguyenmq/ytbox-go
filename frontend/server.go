@@ -88,9 +88,7 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 		"video_id":         current_song.ServiceId,
 		"song_count":       len(playlist.Songs),
 		"queue":            playlist.Songs,
-		"increment_index": func(index int) int {
-			return index + 1
-		},
+		"increment_index":  increment_index,
 	})
 }
 
@@ -100,11 +98,11 @@ func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 	if err != nil {
 		context.String(http.StatusInternalServerError, "Failed to retrieve playlist")
 	} else {
-		for i := 0; i < len(playlist.Songs); i++ {
-			song := playlist.Songs[i]
-			context.String(http.StatusOK, "%3d. { id: %2d, user: %2d, title: %s }\n",
-				i+1, song.SongId, song.UserId, song.Title)
-		}
+		context.HTML(http.StatusOK, "layouts/queue.html", gin.H{
+			"song_count":      len(playlist.Songs),
+			"queue":           playlist.Songs,
+			"increment_index": increment_index,
+		})
 	}
 }
 
@@ -135,8 +133,13 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 	}
 
 	context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
-		"now_playing": title,
-		"user_name":   current_song.Username,
-		"video_id":    current_song.ServiceId,
+		"now_playing":      title,
+		"has_song_playing": has_song_playing,
+		"user_name":        current_song.Username,
+		"video_id":         current_song.ServiceId,
 	})
+}
+
+func increment_index(index int) int {
+	return index + 1
 }
