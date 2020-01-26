@@ -73,16 +73,34 @@ func (c *BackendClient) GetNowPlaying() (*cmpb.Song, error) {
 }
 
 func (c *BackendClient) RemoveSong(song_id uint32, user_id uint32) (*bepb.Error, error) {
-	var eviction = bepb.Eviction{
+	var eviction_request = bepb.Eviction{
 		SongId: song_id,
 		UserId: user_id,
 	}
 
-	response, err := c.be_client.RemoveSong(context.Background(), &eviction)
+	response, err := c.be_client.RemoveSong(context.Background(), &eviction_request)
 
 	if err != nil {
 		log.Printf("Failed to remove song with error: %v\n", err)
 	}
 
 	return response, err
+}
+
+func (c *BackendClient) LoginNewUser(user_name string) (*bepb.User, error) {
+	var user_request = bepb.User{
+		Username: user_name,
+	}
+
+	user, err := c.be_client.LoginUser(context.Background(), &user_request)
+
+	if err != nil {
+		log.Printf("Failed to login user with error: %v\n", err)
+	}
+
+	if user.UserId == 0 {
+		log.Printf("Failed to login")
+	}
+
+	return user, err
 }

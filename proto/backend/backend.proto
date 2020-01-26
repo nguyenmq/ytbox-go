@@ -32,7 +32,7 @@ service YtbBackend {
 
     // Login the given user. If a user with the given id doesn't exist, then a
     // new one with the given name will be created. A successful call will
-    // return the user will an id greater than 0.
+    // return the user with an id greater than 0.
     rpc LoginUser(User) returns (User) {}
 
     // Skip to the next song in the playlist
