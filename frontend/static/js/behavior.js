@@ -83,6 +83,7 @@ $(document).ready(function(){
                         $("#queue_title").click(refresh_elements);
                         $("#queue_title").on("tap", refresh_elements);
                         $(".queue_rm").click(remove_song);
+                        $(".skip_now_playing").click(skip_song);
                         flip_collapse_hint();
                         flip_banner_details();
                     },
@@ -98,6 +99,28 @@ $(document).ready(function(){
         $.ajax({
             url: "/remove",
             type: "POST",
+            data: { 'song_id' : event.currentTarget.id },
+            error: function(jqXHR, textStatus, errorThrown) {
+                if(jqXHR.status == 500) {
+                    $("#alert_area").empty();
+                    $("#alert_area").append(jqXHR.responseText);
+                } else {
+                    alert("Failed to contact server");
+                }
+            },
+            success: function(data, textStatus, errorThrown) {
+                refresh_elements();
+            }
+        });
+    };
+
+    /*----------------------------------------------------------------
+    Skip the currently playing song
+    ----------------------------------------------------------------*/
+    function skip_song(event) {
+        $.ajax({
+            url: "/next",
+            type: "GET",
             data: { 'song_id' : event.currentTarget.id },
             error: function(jqXHR, textStatus, errorThrown) {
                 if(jqXHR.status == 500) {
@@ -179,6 +202,9 @@ $(document).ready(function(){
 
     // Register handler on queue items to remove song
     $(".queue_rm").click(remove_song);
+
+    // Register handler to skip the currently playing song
+    $(".skip_now_playing").click(skip_song);
 
     // Register handler on the queue title to refresh items
     $("#queue_title").click(refresh_elements);

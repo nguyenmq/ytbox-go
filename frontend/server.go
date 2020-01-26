@@ -63,6 +63,7 @@ func NewServer(addr string) *FrontendServer {
 	frontend.router.POST("/remove", frontend.HandleRemove)
 	frontend.router.GET("/login", frontend.HandleLoginPage)
 	frontend.router.POST("/login", frontend.HandleLoginPost)
+	frontend.router.GET("/next", frontend.HandleNextSong)
 	frontend.router.GET("/ping", func(context *gin.Context) {
 		context.String(http.StatusOK, "pong")
 	})
@@ -99,15 +100,13 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 
 		playlist, err := s.client.GetPlaylist()
 
-		user_name := s.TransformUsername(current_song, session.Get("user_id").(uint32))
 		user_id := session.Get("user_id").(uint32)
 
 		context.HTML(http.StatusOK, "index", gin.H{
 			"title":                "yt-box: Song Queue",
 			"now_playing":          title,
 			"has_song_playing":     has_song_playing,
-			"user_name":            user_name,
-			"video_id":             current_song.ServiceId,
+			"song":                 current_song,
 			"song_count":           len(playlist.Songs),
 			"queue":                playlist.Songs,
 			"session_user_id":      user_id,
@@ -168,13 +167,15 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 	}
 
 	session := sessions.Default(context)
-	user_name := s.TransformUsername(current_song, session.Get("user_id").(uint32))
+	user_id := session.Get("user_id").(uint32)
 
 	context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
-		"now_playing":      title,
-		"has_song_playing": has_song_playing,
-		"user_name":        user_name,
-		"video_id":         current_song.ServiceId,
+		"now_playing":          title,
+		"has_song_playing":     has_song_playing,
+		"song":                 current_song,
+		"session_user_id":      user_id,
+		"transform_user_name":  s.TransformUsername,
+		"matches_session_user": s.MatchesSessionUser,
 	})
 }
 
@@ -226,6 +227,18 @@ func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
 	context.Request.Method = "GET"
 	context.Request.URL.Path = "/"
 	s.router.HandleContext(context)
+}
+
+func (s *FrontendServer) HandleNextSong(context *gin.Context) {
+	current_song, _ := s.client.GetNowPlaying()
+	session := sessions.Default(context)
+	user_id := session.Get("user_id").(uint32)
+
+	if s.MatchesSessionUser(current_song.UserId, user_id) {
+		s.client.NextSong()
+	}
+
+	context.Status(http.StatusOK)
 }
 
 func (s *FrontendServer) TransformUsername(song *cmpb.Song, session_user_id uint32) string {

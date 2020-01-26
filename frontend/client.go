@@ -104,3 +104,13 @@ func (c *BackendClient) LoginNewUser(user_name string) (*bepb.User, error) {
 
 	return user, err
 }
+
+func (c *BackendClient) NextSong() (*bepb.Error, error) {
+	response, err := c.be_client.NextSong(context.Background(), &cmpb.Empty{})
+
+	if err != nil {
+		log.Printf("Failed to skip currently playing song with error: %v\n", err)
+	}
+
+	return response, err
+}
