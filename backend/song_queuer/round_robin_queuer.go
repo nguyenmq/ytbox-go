@@ -13,7 +13,7 @@ import (
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
-var markedForRemoval = -1
+const markedForRemoval = -1
 
 // A user submission managed by the round robin queuer
 type submission struct {
@@ -107,6 +107,8 @@ func (roundRobin *RoundRobinQueuer) remove(songId uint32, userId uint32) error {
 			roundRobin.queue[i].round = markedForRemoval
 			sort.Sort(byRoundRobin(roundRobin.queue))
 			roundRobin.pop()
+			// give the user deleting a song back one of their rounds
+			roundRobin.users[userId]--
 			return nil
 		}
 	}
