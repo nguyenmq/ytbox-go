@@ -64,6 +64,16 @@ func (fifo *FifoQueuer) Len() int {
 }
 
 /*
+ * Clear the now playing state
+ */
+func (fifo *FifoQueuer) ClearNowPlaying() {
+	fifo.npLock.Lock()
+	defer fifo.npLock.Unlock()
+
+	fifo.nowPlaying = nil
+}
+
+/*
  * Returns the data for the currently playing song
  */
 func (fifo *FifoQueuer) NowPlaying() *cmpb.Song {
@@ -99,6 +109,7 @@ func (fifo *FifoQueuer) GetPlaylist() *bepb.Playlist {
 func (fifo *FifoQueuer) WaitForMoreSongs() {
 	fifo.cond.L.Lock()
 	for fifo.Len() == 0 {
+		fifo.ClearNowPlaying()
 		fifo.cond.Wait()
 	}
 	fifo.cond.L.Unlock()

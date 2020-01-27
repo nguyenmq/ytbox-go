@@ -1,7 +1,3 @@
-/*
- * This file describes the types and interfaces used by yt_box backend
- */
-
 package song_queue
 
 import (
@@ -10,17 +6,21 @@ import (
 )
 
 /*
- * A SongQueuer maintains a list of songs.
+ * A SongQueuer maintains a list of songs in its queue and the state of which
+ * is the currently playing song.
  */
 type SongQueuer interface {
 	// Add a song to the queue
 	AddSong(song *cmpb.Song)
 
-	// Initialize the queue scheduler
+	// Initialize the queue
 	Init()
 
 	// Get the length of the playlist
 	Len() int
+
+	// Clear the now playing state
+	ClearNowPlaying()
 
 	// Get the song that's now playing
 	NowPlaying() *cmpb.Song
@@ -31,7 +31,7 @@ type SongQueuer interface {
 	// Blocks the current thread while the size of the playlist is zero
 	WaitForMoreSongs()
 
-	// Pop a song off the queue
+	// Pop a song off the front of the queue
 	PopQueue() *cmpb.Song
 
 	// Remove song from the queue

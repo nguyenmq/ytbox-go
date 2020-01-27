@@ -103,6 +103,7 @@ func (mgr *playerManager) sendToPlayers(control *bepb.PlayerControl) {
 func (mgr *playerManager) remove(id int) {
 	mgr.playerLock.Lock()
 	defer mgr.playerLock.Unlock()
+
 	delete(mgr.streams, id)
 	delete(mgr.ready, id)
 	log.Printf("Removed player %d", id)
@@ -184,6 +185,7 @@ func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
 			control.Command = bepb.CommandType_Play
 			control.Song = song
 		} else {
+			mgr.queue.ClearNowPlaying()
 			control.Command = bepb.CommandType_None
 		}
 
