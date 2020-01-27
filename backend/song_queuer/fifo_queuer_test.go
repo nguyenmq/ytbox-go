@@ -3,24 +3,24 @@ package song_queue
 import (
 	"testing"
 
-	pb "github.com/nguyenmq/ytbox-go/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
  * List of sample song data to test against
  */
-var sampleSongs = []pb.Song{
-	{"title 1", 1, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xdeadbeef"},
-	{"title 2", 2, "Kid B", 2, pb.ServiceType_ServiceYoutube, "0xba5eba11"},
-	{"title 3", 3, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xf01dab1e"},
-	{"title 4", 4, "Kid B", 2, pb.ServiceType_ServiceYoutube, "0xb01dface"},
-	{"title 5", 5, "Kid A", 1, pb.ServiceType_ServiceYoutube, "0xca55e77e"},
+var sampleSongs = []cmpb.Song{
+	{"title 1", 1, "Kid A", 1, cmpb.ServiceType_Youtube, "0xdeadbeef"},
+	{"title 2", 2, "Kid B", 2, cmpb.ServiceType_Youtube, "0xba5eba11"},
+	{"title 3", 3, "Kid A", 1, cmpb.ServiceType_Youtube, "0xf01dab1e"},
+	{"title 4", 4, "Kid B", 2, cmpb.ServiceType_Youtube, "0xb01dface"},
+	{"title 5", 5, "Kid A", 1, cmpb.ServiceType_Youtube, "0xca55e77e"},
 }
 
 /*
  * Compares two songs and returns true if they are the same
  */
-func compareSongs(first *pb.Song, second *pb.Song) bool {
+func compareSongs(first *cmpb.Song, second *cmpb.Song) bool {
 	var same bool = false
 	same = (first.Title == second.Title)
 	same = (first.ServiceId == second.ServiceId) && same
@@ -38,7 +38,7 @@ func TestEmptyQueue(t *testing.T) {
 	var fifo FifoQueuer
 	fifo.Init()
 
-	var nextSong *pb.Song = fifo.PopQueue()
+	var nextSong *cmpb.Song = fifo.PopQueue()
 	if nextSong != nil {
 		t.Error("Expected nil, but got", nextSong)
 	}
@@ -53,7 +53,7 @@ func TestOneQueue(t *testing.T) {
 
 	fifo.AddSong(&sampleSongs[0])
 
-	var nextSong *pb.Song = fifo.PopQueue()
+	var nextSong *cmpb.Song = fifo.PopQueue()
 	if nextSong == nil {
 		t.Error("Expected a song but got nil")
 	} else if compareSongs(nextSong, &sampleSongs[0]) == false {
@@ -71,7 +71,7 @@ func TestOneQueue(t *testing.T) {
  */
 func TestManyQueue(t *testing.T) {
 	var fifo FifoQueuer
-	var nextSong *pb.Song
+	var nextSong *cmpb.Song
 	fifo.Init()
 
 	for i := 0; i < len(sampleSongs); i++ {

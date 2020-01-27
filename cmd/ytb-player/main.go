@@ -272,13 +272,13 @@ func buildSongLink(song *cmpb.Song) (string, bool) {
 	ok := true
 
 	switch song.GetService() {
-	case cmpb.ServiceType_ServiceLocal:
+	case cmpb.ServiceType_Local:
 		link = song.GetServiceId()
 
-	case cmpb.ServiceType_ServiceYoutube:
+	case cmpb.ServiceType_Youtube:
 		link = fmt.Sprintf("https://www.youtube.com/watch?v=%s", song.GetServiceId())
 
-	case cmpb.ServiceType_ServiceNone:
+	case cmpb.ServiceType_None:
 		ok = false
 
 	default:

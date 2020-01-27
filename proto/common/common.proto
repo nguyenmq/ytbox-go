@@ -13,10 +13,10 @@ package common_pb;
 message Empty {}
 
 enum ServiceType {
-    ServiceNone    = 0;
-    ServiceYoutube = 1;
-    ServiceSpotify = 2;
-    ServiceLocal   = 3;
+    None    = 0;
+    Youtube = 1;
+    Spotify = 2;
+    Local   = 3;
 }
 
 // A song in the queue

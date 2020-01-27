@@ -57,7 +57,7 @@ func fetchYoutubeSongData(link string, song *cmpb.Song) error {
 
 	song.Title = parsed[0]
 	song.ServiceId = parsed[1]
-	song.Service = cmpb.ServiceType_ServiceYoutube
+	song.Service = cmpb.ServiceType_Youtube
 
 	return nil
 }
@@ -81,7 +81,7 @@ func fetchLocalSongData(link string, song *cmpb.Song) error {
 
 	song.Title = fmt.Sprintf("%s - %s", tags.Artist(), tags.Title())
 	song.ServiceId = link
-	song.Service = cmpb.ServiceType_ServiceLocal
+	song.Service = cmpb.ServiceType_Local
 
 	return nil
 }
