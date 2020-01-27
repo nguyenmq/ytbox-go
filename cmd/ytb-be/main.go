@@ -21,7 +21,7 @@ import (
 var (
 	app      = kingpin.New(backend.LogPrefix, "yt_box backend server")
 	all      = app.Flag("all", "Listen on all interfaces. Only listens on localhost by default.").Short('a').Bool()
-	port     = app.Flag("port", "Port to listen on").Default("8000").Short('p').String()
+	port     = app.Flag("port", "Port to listen on").Default("9009").Short('p').String()
 	loadFile = app.Flag("load", "Load a serialized protobuf playlist from a file").Short('l').ExistingFile()
 	dbFile   = app.Flag("database", "Path to database").Default("./ytbox.db").Short('d').String()
 )

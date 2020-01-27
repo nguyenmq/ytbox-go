@@ -48,20 +48,20 @@ type playerManager struct {
 	ready      map[int]bool
 	playerLock sync.RWMutex
 	streamIds  int
-	queue      queuer.SongQueuer
+	queueMgr   *queuer.SongQueueManager
 }
 
 /*
  * Initialize the player manager. It still needs to be started after being
  * initialized.
  */
-func (mgr *playerManager) init(queue queuer.SongQueuer) {
+func (mgr *playerManager) init(queueMgr *queuer.SongQueueManager) {
 	mgr.fanIn = make(chan playerMessage)
 	mgr.fanOut = make(chan *bepb.PlayerControl)
 	mgr.streams = make(map[int]*playerState, 2)
 	mgr.ready = make(map[int]bool, 2)
 	mgr.streamIds = 0
-	mgr.queue = queue
+	mgr.queueMgr = queueMgr
 }
 
 /*
@@ -173,11 +173,11 @@ func (mgr *playerManager) start() {
  */
 func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
 	// Wait for there to be at least one song in the playlist
-	mgr.queue.WaitForMoreSongs()
+	mgr.queueMgr.WaitForMoreSongs()
 
 	// Do a final check to see if all players are ready for the next song
 	if mgr.playersReady() {
-		song := mgr.queue.PopQueue()
+		song := mgr.queueMgr.PopQueue()
 		log.Println("Popped song")
 		control := bepb.PlayerControl{}
 
@@ -185,7 +185,7 @@ func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
 			control.Command = bepb.CommandType_Play
 			control.Song = song
 		} else {
-			mgr.queue.ClearNowPlaying()
+			mgr.queueMgr.ClearNowPlaying()
 			control.Command = bepb.CommandType_None
 		}
 

@@ -32,13 +32,13 @@ const (
  * Implements the backend rpc server interface
  */
 type BackendServer struct {
-	listener  net.Listener      // network listener
-	beServer  *grpc.Server      // backend RPC server
-	queue     queuer.SongQueuer // playlist queue
-	dbManager db.DbManager      // database manager
-	userCache *UserCache        // user identity cache
-	playerMgr *playerManager    // player manager
-	streamWG  sync.WaitGroup    // wait group for streaming goroutines
+	listener  net.Listener             // network listener
+	beServer  *grpc.Server             // backend RPC server
+	queueMgr  *queuer.SongQueueManager // playlist queue
+	dbManager db.DbManager             // database manager
+	userCache *UserCache               // user identity cache
+	playerMgr *playerManager           // player manager
+	streamWG  sync.WaitGroup           // wait group for streaming goroutines
 }
 
 /*
@@ -60,8 +60,8 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 	bepb.RegisterYtbBePlayerServer(server.beServer, server)
 
 	// initialize the song queue
-	server.queue = new(queuer.FifoQueuer)
-	server.queue.Init()
+	server.queueMgr = new(queuer.SongQueueManager)
+	server.queueMgr.Init(queuer.NewRoundRobinQueuer())
 
 	// initialize the database manager
 	server.dbManager = new(db.SqliteManager)
@@ -78,7 +78,7 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 
 	// initialize the player manager
 	server.playerMgr = new(playerManager)
-	server.playerMgr.init(server.queue)
+	server.playerMgr.init(server.queueMgr)
 
 	return server
 }
@@ -131,9 +131,9 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 
 	response.Success = true
 	response.Message = "Success"
-	s.queue.AddSong(song)
+	s.queueMgr.AddSong(song)
 	s.dbManager.AddSong(song)
-	s.queue.SavePlaylist(queueSnapshot)
+	s.queueMgr.SavePlaylist(queueSnapshot)
 	log.Printf("Song data: { %v}", song)
 
 	return response, nil
@@ -166,7 +166,7 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
 			Service:   playlist.Songs[i].Service,
 			ServiceId: playlist.Songs[i].ServiceId,
 		}
-		s.queue.AddSong(song)
+		s.queueMgr.AddSong(song)
 		log.Printf("%3d. { %v}", i+1, song)
 	}
 }
@@ -175,7 +175,7 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
  * Returns the songs in the queue back to the requesting client
  */
 func (s *BackendServer) GetPlaylist(con context.Context, arg *cmpb.Empty) (*bepb.Playlist, error) {
-	return s.queue.GetPlaylist(), nil
+	return s.queueMgr.GetPlaylist(), nil
 }
 
 /*
@@ -219,12 +219,12 @@ func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.U
 }
 
 /*
- * Pops a song off the top of the queue and returns it
+ * Pops a song off the top of the queueMgr and returns it
  */
 func (s *BackendServer) PopQueue(con context.Context, empty *cmpb.Empty) (*cmpb.Song, error) {
-	if s.queue.Len() > 0 {
-		song := s.queue.PopQueue()
-		s.queue.SavePlaylist(queueSnapshot)
+	if s.queueMgr.Len() > 0 {
+		song := s.queueMgr.PopQueue()
+		s.queueMgr.SavePlaylist(queueSnapshot)
 		log.Printf("Popped song: { %v}", song)
 		return song, nil
 	}
@@ -238,7 +238,7 @@ func (s *BackendServer) PopQueue(con context.Context, empty *cmpb.Empty) (*cmpb.
  */
 func (s *BackendServer) SavePlaylist(con context.Context, fname *bepb.FilePath) (*bepb.Error, error) {
 	response := &bepb.Error{Success: false}
-	err := s.queue.SavePlaylist(fname.Path)
+	err := s.queueMgr.SavePlaylist(fname.Path)
 	if err != nil {
 		response.Message = err.Error()
 		return response, nil
@@ -284,7 +284,7 @@ func (s *BackendServer) getUsernameFromId(userId uint32) string {
  * eviction must match the id of the user who submitted the song.
  */
 func (s *BackendServer) RemoveSong(con context.Context, eviction *bepb.Eviction) (*bepb.Error, error) {
-	err := s.queue.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
+	err := s.queueMgr.RemoveSong(eviction.GetSongId(), eviction.GetUserId())
 
 	if err != nil {
 		log.Printf("Failed to remove song from playlist: %v", err)
@@ -300,7 +300,7 @@ func (s *BackendServer) RemoveSong(con context.Context, eviction *bepb.Eviction)
  * current song, then an empty Song struct is returned.
  */
 func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*cmpb.Song, error) {
-	nowPlaying := s.queue.NowPlaying()
+	nowPlaying := s.queueMgr.NowPlaying()
 
 	if nowPlaying == nil {
 		return &cmpb.Song{}, nil
@@ -314,7 +314,7 @@ func (s *BackendServer) GetNowPlaying(con context.Context, empty *cmpb.Empty) (*
  * player
  */
 func (s *BackendServer) NextSong(con context.Context, empty *cmpb.Empty) (*bepb.Error, error) {
-	nextSong := s.queue.PopQueue()
+	nextSong := s.queueMgr.PopQueue()
 	control := &bepb.PlayerControl{Command: bepb.CommandType_Next, Song: nextSong}
 	s.playerMgr.sendToPlayers(control)
 	return &bepb.Error{Success: true, Message: "Success"}, nil

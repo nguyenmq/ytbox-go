@@ -22,7 +22,7 @@ const (
 var (
 	app        = kingpin.New(prefix, "Command line client to ytb-be.")
 	remoteHost = app.Flag("host", "Address of remote ytb-be service.").Default("127.0.0.1").Short('h').String()
-	remotePort = app.Flag("port", "Port of remote ytb-be service.").Default("8000").Short('p').String()
+	remotePort = app.Flag("port", "Port of remote ytb-be service.").Default("9009").Short('p').String()
 
 	// "playlist" subcommand
 	playlist = app.Command("playlist", "Get current songs in the playlist.").Alias("ls")

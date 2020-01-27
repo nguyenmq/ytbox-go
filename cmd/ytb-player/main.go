@@ -23,7 +23,7 @@ import (
 var (
 	app        = kingpin.New("ytb-player", "Command line client to play videos in the ytb-be queue")
 	remoteHost = app.Flag("host", "Address of remote ytb-be service").Default("127.0.0.1").Short('h').String()
-	remotePort = app.Flag("port", "Port of remote ytb-be service").Default("8000").Short('p').String()
+	remotePort = app.Flag("port", "Port of remote ytb-be service").Default("9009").Short('p').String()
 	continuous = app.Flag("cont", "Continuous play songs from the queue").Short('c').Bool()
 )
 

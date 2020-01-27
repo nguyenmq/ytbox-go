@@ -1,42 +1,34 @@
 package song_queue
 
 import (
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
 /*
- * A SongQueuer maintains a list of songs in its queue and the state of which
- * is the currently playing song.
+ * A songQueuer maintains a list of songs
  */
-type SongQueuer interface {
-	// Add a song to the queue
-	AddSong(song *cmpb.Song)
-
-	// Initialize the queue
-	Init()
+type songQueuer interface {
+	// Get an element pointer to the front of the queue. User for interation
+	front() queueElement
 
 	// Get the length of the playlist
-	Len() int
+	length() int
 
-	// Clear the now playing state
-	ClearNowPlaying()
+	// Pop a song off the front of the queue. Returns nil if queue is empty.
+	pop() *cmpb.Song
 
-	// Get the song that's now playing
-	NowPlaying() *cmpb.Song
-
-	// Get a list of the currents songs in the queue
-	GetPlaylist() *bepb.Playlist
-
-	// Blocks the current thread while the size of the playlist is zero
-	WaitForMoreSongs()
-
-	// Pop a song off the front of the queue
-	PopQueue() *cmpb.Song
+	// Push a new song onto the queue
+	push(song *cmpb.Song)
 
 	// Remove song from the queue
-	RemoveSong(songId uint32, userId uint32) error
+	remove(songId uint32, userId uint32) error
+}
 
-	// Saves the playlist to a file
-	SavePlaylist(path string) error
+type queueElement interface {
+	// Get the song at this element in the queue
+	value() *cmpb.Song
+
+	// Get the next song in the queue. The end of the queue is reached when nil
+	// is returned.
+	next() queueElement
 }
