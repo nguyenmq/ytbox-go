@@ -133,7 +133,6 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 	response.Message = "Success"
 	s.queueMgr.AddSong(song)
 	s.dbManager.AddSong(song)
-	s.queueMgr.SavePlaylist(queueSnapshot)
 	log.Printf("Song data: { %v}", song)
 
 	return response, nil
@@ -224,8 +223,7 @@ func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.U
 func (s *BackendServer) PopQueue(con context.Context, empty *cmpb.Empty) (*cmpb.Song, error) {
 	if s.queueMgr.Len() > 0 {
 		song := s.queueMgr.PopQueue()
-		s.queueMgr.SavePlaylist(queueSnapshot)
-		log.Printf("Popped song: { %v}", song)
+		log.Printf("Popped song: %v\n", song)
 		return song, nil
 	}
 

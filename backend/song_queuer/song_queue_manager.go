@@ -117,8 +117,6 @@ func (manager *SongQueueManager) WaitForMoreSongs() {
  * Pops the next song off the queue and returns it
  */
 func (manager *SongQueueManager) PopQueue() *cmpb.Song {
-	var front *cmpb.Song = nil
-
 	manager.npLock.Lock()
 	defer manager.npLock.Unlock()
 	manager.nowPlaying = nil
@@ -127,11 +125,10 @@ func (manager *SongQueueManager) PopQueue() *cmpb.Song {
 	defer manager.lock.Unlock()
 
 	if manager.queue.length() > 0 {
-		front = manager.queue.pop()
-		manager.nowPlaying = front
+		manager.nowPlaying = manager.queue.pop()
 	}
 
-	return front
+	return manager.nowPlaying
 }
 
 /*

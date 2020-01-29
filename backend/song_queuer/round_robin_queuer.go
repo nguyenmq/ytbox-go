@@ -117,12 +117,16 @@ func (roundRobin *RoundRobinQueuer) remove(songId uint32, userId uint32) error {
 }
 
 func (roundRobin *RoundRobinQueuer) front() queueElement {
-	new_element := roundRobinElement{
-		queue: roundRobin.queue,
-		index: 0,
+	if len(roundRobin.queue) > 0 {
+		new_element := roundRobinElement{
+			queue: roundRobin.queue,
+			index: 0,
+		}
+
+		return new_element
 	}
 
-	return new_element
+	return nil
 }
 
 type roundRobinElement struct {
