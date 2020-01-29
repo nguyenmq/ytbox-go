@@ -1,9 +1,8 @@
-<div id="np" class="jumbotron" data-toggle="collapse" data-target="#banner_detail">
-    <img src="/static/img/ytbox_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
+<div id="np" class="jumbotron" data-target="#banner_detail">
+    <img src="/static/img/ytbox_sign_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
     <h2 id="np_placeholder">{{.now_playing}}</h2>
-    <h2 id="np_song" class="extend">{{.now_playing}}</h2>
     {{if .has_song_playing}}
-        <div id="banner_detail" class="collapse">
+        <div id="banner_detail" >
             <p>Submitted by {{call $.transform_user_name .song .session_user_id}}
             <dt class="queue_tool">
                 <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{.song.ServiceId}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></li>
@@ -12,6 +11,5 @@
                 {{end}}
             </dt>
         </div>
-        <p id="banner_chevron"><span id="chevron" class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span></p>
     {{end}}
 </div>

@@ -19,7 +19,8 @@ a {
 }
 
 .jumbotron {
-    border-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    border-top-left-radius: 0px !important;
     padding: 10px;
     width: 100%;
     background: #ff4646;
@@ -33,7 +34,8 @@ a {
 
 .jumbotron p {
     margin: 0pt;
-    font-size: 12pt;
+    font-size: 11pt;
+    font-weight: bold;
 }
 
 .jumbotron h2 {
@@ -83,11 +85,7 @@ a {
 }
 
 #np_placeholder {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: height 0.5s ease;
-    font-size: 36px;
+    font-size: 32px;
 }
 
 #np_song {
@@ -171,8 +169,8 @@ a {
 
 #banner_logo {
     /* display: inline; */
-    margin-bottom: 6pt;
-    max-height: 16pt;
+    margin-bottom: 10pt;
+    max-height: 14pt;
 }
 
 #banner_detail {
