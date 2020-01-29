@@ -83,13 +83,14 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
  * Handler to send a song to the remote server
  */
 func sendCommand(client bepb.YtbBackendClient) {
-	response, err := client.SendSong(context.Background(), &bepb.Submission{*sendLink, *sendUser})
+	link := *sendLink
+	_, err := client.SendSong(context.Background(), &bepb.Submission{link, *sendUser})
 	if err != nil {
 		fmt.Printf("failed to call SendSong: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Response: {success: %t, message: %s}\n", response.Success, response.Message)
+	fmt.Println(link)
 }
 
 /*

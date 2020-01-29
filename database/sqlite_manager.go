@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
@@ -48,7 +49,8 @@ const (
 )
 
 type SqliteManager struct {
-	db *sql.DB
+	db   *sql.DB
+	lock *sync.RWMutex
 }
 
 /*
@@ -75,12 +77,17 @@ func (mgr *SqliteManager) Init(dbPath string) {
 	} else {
 		fil.Close()
 	}
+
+	mgr.lock = new(sync.RWMutex)
 }
 
 /*
  * Add a new song to the database
  */
 func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
 	stmt, err := mgr.db.Prepare(insertSong)
 	if err != nil {
 		log.Printf("Error preparing add song statement: %v", err)
@@ -109,6 +116,9 @@ func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
  * Add a new user to the database
  */
 func (mgr *SqliteManager) AddUser(username string) (*UserData, error) {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
 	stmt, err := mgr.db.Prepare(insertUser)
 	if err != nil {
 		log.Printf("Error preparing add user statement: %v", err)
@@ -129,13 +139,23 @@ func (mgr *SqliteManager) AddUser(username string) (*UserData, error) {
 	}
 	log.Printf("Added new user: {name: %s, id: %d}", username, userId)
 
-	return mgr.GetUserById(uint32(userId))
+	return mgr.unsyncGetUserById(uint32(userId))
 }
 
 /*
- * Query for the user data of the givern user id
+ * Query for the user data of the given user id
  */
 func (mgr *SqliteManager) GetUserById(userId uint32) (*UserData, error) {
+	mgr.lock.RLock()
+	defer mgr.lock.RUnlock()
+	return mgr.unsyncGetUserById(userId)
+}
+
+/*
+ * Query for the user data of the given user id. This is a helper method that
+ * relies on other callers to already have the mutex lock.
+ */
+func (mgr *SqliteManager) unsyncGetUserById(userId uint32) (*UserData, error) {
 	userData := new(UserData)
 
 	err := mgr.db.QueryRow(queryUserById, userId).Scan(&userData.User.UserId,
@@ -153,6 +173,9 @@ func (mgr *SqliteManager) GetUserById(userId uint32) (*UserData, error) {
  * Updates the username of an existing user.
  */
 func (mgr *SqliteManager) UpdateUsername(username string, userId uint32) error {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
 	stmt, err := mgr.db.Prepare(updateUsername)
 	if err != nil {
 		log.Printf("Error preparing update username statement: %v", err)

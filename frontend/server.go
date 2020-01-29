@@ -42,6 +42,7 @@ func NewServer(addr string) *FrontendServer {
 	frontend.router = gin.Default()
 	frontend.router.HTMLRender = ginview.Default()
 	frontend.router.Static("/static", "./static")
+	frontend.router.StaticFile("/favicon.ico", "./static/img/favicon.ico")
 	frontend.router.Use(sessions.Sessions("yt_box", frontend.store))
 
 	// set up the http server
