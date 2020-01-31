@@ -228,9 +228,7 @@ func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
 	session := sessions.Default(context)
 	session.Set("user_id", user.UserId)
 	session.Save()
-	context.Request.Method = "GET"
-	context.Request.URL.Path = "/"
-	s.router.HandleContext(context)
+	context.Redirect(http.StatusMovedPermanently, "/")
 }
 
 func (s *FrontendServer) HandleNextSong(context *gin.Context) {
