@@ -57,12 +57,15 @@ func NewRoundRobinQueuer() *RoundRobinQueuer {
 }
 
 func (roundRobin *RoundRobinQueuer) push(song *cmpb.Song) {
-	var round int
+	var round int = 0
 
+	// get the current round belonging to the user
 	if user_round, ok := roundRobin.users[song.UserId]; ok == true {
 		round = user_round + 1
-	} else {
-		// schedule for current round
+	}
+
+	// bump the user up to the current round if they're behind
+	if round < roundRobin.round {
 		round = roundRobin.round
 	}
 

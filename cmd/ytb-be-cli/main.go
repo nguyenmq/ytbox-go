@@ -103,7 +103,6 @@ func playlistCommand(client bepb.YtbBackendClient) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Songs in the playlist:\n")
 	for i := 0; i < len(playlist.Songs); i++ {
 		fmt.Printf("%3d. { id: %2d, user: %2d, title: %s }\n",
 			i+1, playlist.Songs[i].SongId, playlist.Songs[i].UserId, playlist.Songs[i].Title)

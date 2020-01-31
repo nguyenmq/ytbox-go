@@ -5,6 +5,7 @@
 package frontend
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +20,8 @@ import (
 )
 
 const (
-	LogPrefix string = "ytb-fe" // logging prefix name
+	LogPrefix      string = "ytb-fe" // logging prefix name
+	titleMaxLength int    = 100      // the maximum length of the now playing title
 )
 
 type FrontendServer struct {
@@ -96,7 +98,7 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 		has_song_playing := current_song.SongId != 0
 
 		if err == nil && has_song_playing {
-			title = current_song.Title
+			title = truncate_song_title(current_song.Title, titleMaxLength)
 		}
 
 		playlist, err := s.client.GetPlaylist()
@@ -164,7 +166,7 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 	has_song_playing := current_song.SongId != 0
 
 	if err == nil && has_song_playing {
-		title = current_song.Title
+		title = truncate_song_title(current_song.Title, titleMaxLength)
 	}
 
 	session := sessions.Default(context)
@@ -202,6 +204,7 @@ func (s *FrontendServer) HandleRemove(context *gin.Context) {
 }
 
 func (s *FrontendServer) HandleLoginPage(context *gin.Context) {
+	// todo: check for cookie and redirect if already have cookie
 	context.HTML(http.StatusOK, "login", gin.H{
 		"title": "yt-box: Login",
 	})
@@ -256,4 +259,12 @@ func (s *FrontendServer) MatchesSessionUser(user_id uint32, session_user_id uint
 
 func increment_index(index int) int {
 	return index + 1
+}
+
+func truncate_song_title(title string, length int) string {
+	if len(title) > length {
+		return fmt.Sprintf("%s…", title[0:length])
+	}
+
+	return title
 }

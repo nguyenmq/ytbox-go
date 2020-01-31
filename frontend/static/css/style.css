@@ -25,7 +25,6 @@ a {
     width: 100%;
     background: #ff4646;
     color: white;
-    cursor: pointer;
 }
 
 .glyphicon-plus {
@@ -84,7 +83,7 @@ a {
     display: inline;
 }
 
-#np_placeholder {
+#now_playing_title {
     font-size: 32px;
 }
 

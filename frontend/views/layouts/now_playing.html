@@ -1,6 +1,6 @@
 <div id="np" class="jumbotron" data-target="#banner_detail">
     <img src="/static/img/ytbox_sign_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
-    <h2 id="np_placeholder">{{.now_playing}}</h2>
+    <h2 id="now_playing_title">{{.now_playing}}</h2>
     {{if .has_song_playing}}
         <div id="banner_detail" >
             <p>Submitted by {{call $.transform_user_name .song .session_user_id}}

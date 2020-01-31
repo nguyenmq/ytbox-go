@@ -85,7 +85,6 @@ $(document).ready(function(){
                         $(".queue_rm").click(remove_song);
                         $(".skip_now_playing").click(skip_song);
                         flip_collapse_hint();
-                        flip_banner_details();
                     },
                 });
             },
@@ -137,48 +136,6 @@ $(document).ready(function(){
     };
 
     /*----------------------------------------------------------------
-    Registers handlers to flip the up/down chevron on the now playing
-    banner depending on the visible state of the now playing details.
-    ----------------------------------------------------------------*/
-    function flip_banner_details() {
-        // reveal the rest of the song title
-        $("#banner_detail").on('show.bs.collapse', function(event) {
-            var np_song = $("#np_song");
-            var np_placeholder = $("#np_placeholder");
-
-            if(np_song.width() > np_placeholder.width()) {
-                np_song.slideDown(300, function(){
-                    np_placeholder.hide();
-                });
-            }
-        });
-
-        // toggle the chevron orientation
-        $("#banner_detail").on('shown.bs.collapse', function(event) {
-            $("#chevron").toggleClass("glyphicon-chevron-down");
-            $("#chevron").toggleClass("glyphicon-chevron-up");
-        });
-
-        // truncate the song title
-        $("#banner_detail").on('hide.bs.collapse', function(event) {
-            var np_song = $("#np_song");
-            var np_placeholder = $("#np_placeholder");
-
-            if(np_song.width() < np_placeholder.width()) {
-                np_song.slideUp(300, function(){
-                    np_placeholder.show();
-                });
-            }
-        });
-
-        // toggle the chevron orientation
-        $("#banner_detail").on('hidden.bs.collapse', function(event) {
-            $("#chevron").toggleClass("glyphicon-chevron-up");
-            $("#chevron").toggleClass("glyphicon-chevron-down");
-        });
-    }
-
-    /*----------------------------------------------------------------
     Registers handlers to flip the collapse hint on a song in the
     queue
     ----------------------------------------------------------------*/
@@ -211,5 +168,4 @@ $(document).ready(function(){
     $("#queue_title").on("tap", refresh_elements);
 
     flip_collapse_hint();
-    flip_banner_details();
 });
