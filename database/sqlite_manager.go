@@ -22,6 +22,13 @@ const (
 			logged_in BOOLEAN NOT NULL,
 			last_access DATETIME NOT NULL); `
 
+	createRoomsTable = `
+		CREATE TABLE rooms (
+			room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+			room_name TEXT,
+			create_date DATETIME NOT NULL,
+			last_access DATETIME NOT NULL);`
+
 	createSongsTable = `
 		CREATE TABLE songs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,22 +37,31 @@ const (
 			service_id TEXT NOT NULL,
 			date DATETIME NOT NULL,
 			user_id INTEGER NOT NULL,
-			FOREIGN KEY (user_id) REFERENCES users(user_id)); `
+			room_id INTEGER NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(user_id),
+			FOREIGN KEY (room_id) REFERENCES rooms(room_id));`
+
+	enableForeignKeySupport = `
+		PRAGMA foreign_keys = ON;`
+
+	insertRoom = `
+		INSERT INTO rooms VALUES
+		(NULL, ?, datetime('now'), datetime('now'));`
 
 	insertSong = `
 		INSERT INTO songs VALUES
-		(NULL, ?, ?, ?, datetime('now'), ?); `
+		(NULL, ?, ?, ?, datetime('now'), ?, ?);`
 
 	insertUser = `
 		INSERT INTO users VALUES
-		(NULL, ?, 1, datetime('now')); `
+		(NULL, ?, 1, datetime('now'));`
 
 	queryUserById = `
-		SELECT * FROM users WHERE user_id = ?; `
+		SELECT * FROM users WHERE user_id = ?;`
 
 	updateUsername = `
 		UPDATE users SET username=?
-		WHERE user_id=?; `
+		WHERE user_id=?;`
 )
 
 type SqliteManager struct {
@@ -63,22 +79,32 @@ func (mgr *SqliteManager) Close() {
 /*
  * Initialize the sqlite database
  */
-func (mgr *SqliteManager) Init(dbPath string) {
+func (mgr *SqliteManager) Init(dbPath string) error {
 	fil, err := os.Open(dbPath)
 	shouldFound := err != nil
 
 	mgr.db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatalf("Failed to open database connect with error: %v", err)
+		return err
+	}
+
+	_, err = mgr.db.Exec(enableForeignKeySupport)
+	if err != nil {
+		log.Fatalf("Error enabling foreign key support: %v", err)
+		return err
 	}
 
 	if shouldFound {
-		foundDatabase(mgr.db)
+		if err = foundDatabase(mgr.db); err != nil {
+			return err
+		}
 	} else {
 		fil.Close()
 	}
 
 	mgr.lock = new(sync.RWMutex)
+	return nil
 }
 
 /*
@@ -95,7 +121,7 @@ func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(song.Title, song.Service, song.ServiceId, song.UserId)
+	res, err := stmt.Exec(song.Title, song.Service, song.ServiceId, song.UserId, song.RoomId)
 	if err != nil {
 		log.Printf("Error adding new song: %v", err)
 		return err
@@ -195,16 +221,51 @@ func (mgr *SqliteManager) UpdateUsername(username string, userId uint32) error {
 }
 
 /*
+ * Adds a new room with given name
+ */
+func (mgr *SqliteManager) AddRoom(roomName string) error {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
+	stmt, err := mgr.db.Prepare(insertRoom)
+	if err != nil {
+		log.Printf("Error preparing add room statement: %v", err)
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(roomName)
+	if err != nil {
+		log.Printf("Error adding new room: %v", err)
+		return err
+	}
+
+	roomId, err := res.LastInsertId()
+	log.Printf("Added new room: {name: %s, id: %d}", roomName, roomId)
+	return nil
+}
+
+/*
  * Creates a new database with the necessary tables
  */
-func foundDatabase(db *sql.DB) {
+func foundDatabase(db *sql.DB) error {
 	_, err := db.Exec(createUsersTable)
 	if err != nil {
-		log.Fatal("Error creating users table: %v", err)
+		log.Fatalf("Error creating users table: %v", err)
+		return err
+	}
+
+	_, err = db.Exec(createRoomsTable)
+	if err != nil {
+		log.Fatalf("Error creating rooms table: %v", err)
+		return err
 	}
 
 	_, err = db.Exec(createSongsTable)
 	if err != nil {
-		log.Fatal("Error creating users table: %v", err)
+		log.Fatalf("Error creating users table: %v", err)
+		return err
 	}
+
+	return nil
 }

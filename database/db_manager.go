@@ -27,6 +27,9 @@ type DbManager interface {
 	// Add a new user to the users table and returns the user's id
 	AddUser(username string) (*UserData, error)
 
+	// Add a new room to the database
+	AddRoom(roomName string) error
+
 	// Close the database connection
 	Close()
 
@@ -37,5 +40,5 @@ type DbManager interface {
 	UpdateUsername(username string, userId uint32) error
 
 	// Initialize the database interface
-	Init(dbPath string)
+	Init(dbPath string) error
 }

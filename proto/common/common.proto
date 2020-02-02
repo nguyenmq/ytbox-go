@@ -38,4 +38,7 @@ message Song {
 
     // id specific to song's service
     string serviceId = 6;
+
+    // id of the room where the song was submitted
+    uint32 roomId = 7;
 }
