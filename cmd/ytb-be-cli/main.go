@@ -61,6 +61,9 @@ var (
 	// "newRoom" subcommand
 	newRoom  = app.Command("newRoom", "Creates a new room.")
 	roomName = newRoom.Arg("name", "Name of the room.").Required().String()
+
+	getRoom     = app.Command("getRoom", "Query for a room by name.")
+	getRoomName = getRoom.Arg("name", "Name of the room.").Required().String()
 )
 
 /*
@@ -210,6 +213,21 @@ func newRoomCommand(client bepb.YtbBackendClient) {
 	}
 }
 
+func getRoomCommand(client bepb.YtbBackendClient) {
+	room, err := client.GetRoom(context.Background(), &bepb.Room{Name: *getRoomName})
+	if err != nil {
+		fmt.Printf("failed to call CreateRoom: %v\n", err)
+		os.Exit(1)
+	}
+
+	if room.Err.Success == false {
+		fmt.Println(room.Err.Message)
+	} else {
+		fmt.Printf("Room name: %s\n", room.Name)
+		fmt.Printf("Room id: %2d\n", room.Id)
+	}
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -247,6 +265,9 @@ func main() {
 
 	case newRoom.FullCommand():
 		newRoomCommand(client)
+
+	case getRoom.FullCommand():
+		getRoomCommand(client)
 
 	default:
 		nowCommand(client)

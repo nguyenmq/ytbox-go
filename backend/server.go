@@ -393,3 +393,25 @@ func (s *BackendServer) CreateRoom(con context.Context, room *bepb.Room) (*bepb.
 	response.Err.Message = "Room already exists."
 	return response, nil
 }
+
+/*
+ * Handles querying of a room for its existence.
+ */
+func (s *BackendServer) GetRoom(con context.Context, room *bepb.Room) (*bepb.Room, error) {
+	response := new(bepb.Room)
+	response.Err = new(bepb.Error)
+	response.Err.Success = false
+	roomData, err := s.dbManager.GetRoomByName(room.Name)
+
+	if roomData == nil && errors.Is(err, sql.ErrNoRows) {
+		response.Err.Message = "Room does not exist."
+	} else if err != nil {
+		response.Err.Message = err.Error()
+	} else {
+		response.Name = roomData.Room.Name
+		response.Id = roomData.Room.Id
+		response.Err.Success = true
+	}
+
+	return response, nil
+}

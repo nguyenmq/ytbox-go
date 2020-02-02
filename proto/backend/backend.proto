@@ -43,6 +43,9 @@ service YtbBackend {
 
     // Create a new room
     rpc CreateRoom(Room) returns (Room) {}
+
+    // Gets room by name
+    rpc GetRoom(Room) returns (Room) {}
 }
 
 // Contains error number and message
