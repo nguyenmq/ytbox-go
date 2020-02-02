@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
+	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
@@ -58,6 +59,9 @@ const (
 
 	queryUserById = `
 		SELECT * FROM users WHERE user_id = ?;`
+
+	queryRoomByName = `
+		SELECT * FROM rooms where room_name = ?;`
 
 	updateUsername = `
 		UPDATE users SET username=?
@@ -189,6 +193,7 @@ func (mgr *SqliteManager) unsyncGetUserById(userId uint32) (*UserData, error) {
 
 	// if an error occurred or there was no result, then return nil
 	if err != nil {
+		userData = nil
 		return nil, err
 	}
 
@@ -223,26 +228,49 @@ func (mgr *SqliteManager) UpdateUsername(username string, userId uint32) error {
 /*
  * Adds a new room with given name
  */
-func (mgr *SqliteManager) AddRoom(roomName string) error {
+func (mgr *SqliteManager) AddRoom(roomName string) (*RoomData, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
 	stmt, err := mgr.db.Prepare(insertRoom)
 	if err != nil {
 		log.Printf("Error preparing add room statement: %v", err)
-		return err
+		return nil, err
 	}
 	defer stmt.Close()
 
 	res, err := stmt.Exec(roomName)
 	if err != nil {
 		log.Printf("Error adding new room: %v", err)
-		return err
+		return nil, err
 	}
 
 	roomId, err := res.LastInsertId()
 	log.Printf("Added new room: {name: %s, id: %d}", roomName, roomId)
-	return nil
+
+	return mgr.unsyncGetRoomByName(roomName)
+}
+
+func (mgr *SqliteManager) GetRoomByName(roomName string) (*RoomData, error) {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
+	return mgr.unsyncGetRoomByName(roomName)
+}
+
+func (mgr *SqliteManager) unsyncGetRoomByName(roomName string) (*RoomData, error) {
+	roomData := new(RoomData)
+
+	err := mgr.db.QueryRow(queryRoomByName, roomName).Scan(&roomData.Room.Id,
+		&roomData.Room.Name, &roomData.CreateDate, &roomData.LastAccess)
+
+	if err != nil {
+		roomData = nil
+		return nil, err
+	}
+
+	roomData.Room.Err = &bepb.Error{Success: true}
+	return roomData, nil
 }
 
 /*

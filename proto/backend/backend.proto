@@ -40,6 +40,9 @@ service YtbBackend {
 
     // Pause the currently playing song
     rpc PauseSong(common_pb.Empty) returns (Error) {}
+
+    // Create a new room
+    rpc CreateRoom(Room) returns (Room) {}
 }
 
 // Contains error number and message
@@ -86,4 +89,16 @@ message Eviction {
 
     // id of the user who submitted the song
     uint32 userId = 2;
+}
+
+// A room contains an isolated song queue for users to submit songs to
+message Room {
+    // name of the room
+    string name = 1;
+
+    // id of the room
+    uint32 id = 2;
+
+    // error status
+    Error err = 3;
 }

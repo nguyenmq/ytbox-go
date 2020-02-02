@@ -6,6 +6,7 @@ package backend
 
 import (
 	"database/sql"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -191,7 +192,7 @@ func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.U
 	if userData == nil {
 		// Something happened if user data is nil
 
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			// if no results were returned, then create a new user
 			userData, err = s.dbManager.AddUser(user.Username)
 			if err != nil {
@@ -361,4 +362,34 @@ func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) err
 	<-stop
 	s.playerMgr.remove(id)
 	return nil
+}
+
+/*
+ * Handles command to create a new room. Room names should be unique. Will
+ * return an error if the room already exists.
+ */
+func (s *BackendServer) CreateRoom(con context.Context, room *bepb.Room) (*bepb.Room, error) {
+	response := new(bepb.Room)
+	response.Err = new(bepb.Error)
+	response.Err.Success = false
+	roomData, err := s.dbManager.GetRoomByName(room.Name)
+
+	// room doesn't exist so create it
+	if roomData == nil && errors.Is(err, sql.ErrNoRows) {
+		roomData, err = s.dbManager.AddRoom(room.Name)
+
+		if err != nil {
+			log.Printf("Failed to create a new room: {name: %s, error: %v}", room.Name, err)
+			response.Err.Message = "Failed to create room."
+			return response, nil
+		}
+
+		response.Name = roomData.Room.Name
+		response.Id = roomData.Room.Id
+		response.Err.Success = true
+		return response, nil
+	}
+
+	response.Err.Message = "Room already exists."
+	return response, nil
 }

@@ -17,6 +17,12 @@ type UserData struct {
 	LastAccess time.Time
 }
 
+type RoomData struct {
+	Room       bepb.Room
+	CreateDate time.Time
+	LastAccess time.Time
+}
+
 /*
  * Interface for manager the backend database
  */
@@ -28,7 +34,7 @@ type DbManager interface {
 	AddUser(username string) (*UserData, error)
 
 	// Add a new room to the database
-	AddRoom(roomName string) error
+	AddRoom(roomName string) (*RoomData, error)
 
 	// Close the database connection
 	Close()
@@ -38,6 +44,9 @@ type DbManager interface {
 
 	// Updates the given user's name
 	UpdateUsername(username string, userId uint32) error
+
+	// Queries for a room given its name
+	GetRoomByName(roomName string) (*RoomData, error)
 
 	// Initialize the database interface
 	Init(dbPath string) error

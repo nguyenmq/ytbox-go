@@ -57,6 +57,10 @@ var (
 	send     = app.Command("send", "send a link to the queue.")
 	sendLink = send.Arg("link", "Link to song.").Required().String()
 	sendUser = send.Arg("user", "User id to send link under.").Required().Uint32()
+
+	// "newRoom" subcommand
+	newRoom  = app.Command("newRoom", "Creates a new room.")
+	roomName = newRoom.Arg("name", "Name of the room.").Required().String()
 )
 
 /*
@@ -191,6 +195,21 @@ func pauseCommand(client bepb.YtbBackendClient) {
 	fmt.Printf("Response: {success: %t, message: %s}\n", response.GetSuccess(), response.GetMessage())
 }
 
+func newRoomCommand(client bepb.YtbBackendClient) {
+	room, err := client.CreateRoom(context.Background(), &bepb.Room{Name: *roomName})
+	if err != nil {
+		fmt.Printf("failed to call CreateRoom: %v\n", err)
+		os.Exit(1)
+	}
+
+	if room.Err.Success == false {
+		fmt.Println(room.Err.Message)
+	} else {
+		fmt.Printf("Room name: %s\n", room.Name)
+		fmt.Printf("Room id: %2d\n", room.Id)
+	}
+}
+
 func main() {
 	kingpin.Version("0.1")
 	parsed := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -225,6 +244,9 @@ func main() {
 
 	case pause.FullCommand():
 		pauseCommand(client)
+
+	case newRoom.FullCommand():
+		newRoomCommand(client)
 
 	default:
 		nowCommand(client)

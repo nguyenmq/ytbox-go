@@ -5,6 +5,8 @@
 package database
 
 import (
+	"database/sql"
+	"errors"
 	"os"
 	"testing"
 
@@ -54,9 +56,19 @@ func TestAddRoom_when_success(t *testing.T) {
 		t.Error("Error when initializing the database", err)
 	}
 
-	err = dbManager.AddRoom(testRoomName)
+	expectedRoomName := testRoomName
+	expectedRoomId := uint32(testRoomId)
+	actualRoomData, err := dbManager.AddRoom(testRoomName)
 	if err != nil {
 		t.Error("Error when adding new room", err)
+	}
+
+	if actualRoomData.Room.Name != expectedRoomName {
+		t.Error("DB manager should return expected room name", expectedRoomName, "but was", actualRoomData.Room.Name)
+	}
+
+	if actualRoomData.Room.Id != expectedRoomId {
+		t.Error("DB manager should return expected room id", expectedRoomId, "but was", actualRoomData.Room.Id)
 	}
 
 	cleanUp(dbManager)
@@ -94,7 +106,7 @@ func TestAddSong_when_success(t *testing.T) {
 		t.Error("Error when initializing the database", err)
 	}
 
-	err = dbManager.AddRoom(testRoomName)
+	_, err = dbManager.AddRoom(testRoomName)
 	if err != nil {
 		t.Error("Error when adding new room", err)
 	}
@@ -124,18 +136,13 @@ func TestAddSong_whenRoomDoesNotExist_failToAdd(t *testing.T) {
 		t.Error("Error when initializing the database", err)
 	}
 
-	err = dbManager.AddRoom(testRoomName)
-	if err != nil {
-		t.Error("Error when adding new room", err)
-	}
-
 	_, err = dbManager.AddUser(testUserName)
 	if err != nil {
 		t.Error("Error when adding new user", err)
 	}
 
 	actualSong := testSong
-	actualSong.RoomId = testRoomId + 1
+	actualSong.RoomId = testRoomId
 	err = dbManager.AddSong(&actualSong)
 	if err == nil {
 		t.Error("DB manager did not return an error when adding a song with a room id that doesn't exist")
@@ -143,6 +150,57 @@ func TestAddSong_whenRoomDoesNotExist_failToAdd(t *testing.T) {
 
 	if err.(sqlite.Error).Code != sqlite.ErrConstraint {
 		t.Error("DB manager did not fail with a constraint mismatch error:", err.(sqlite.Error))
+	}
+
+	cleanUp(dbManager)
+}
+
+func TestGetRoomByName_when_success(t *testing.T) {
+	dbManager, err := initDatabase()
+
+	if err != nil {
+		t.Error("Error when initializing the database", err)
+	}
+
+	_, err = dbManager.AddRoom(testRoomName)
+	if err != nil {
+		t.Error("Error when adding new room", err)
+	}
+
+	expectedRoomName := testRoomName
+	expectedRoomId := uint32(testRoomId)
+
+	roomData, err := dbManager.GetRoomByName(expectedRoomName)
+	if err != nil {
+		t.Error("Get room by name failed with error:", err)
+	}
+
+	if roomData.Room.Name != expectedRoomName {
+		t.Error("DB manager did not fetch the correct room name:", roomData.Room.Name)
+	}
+
+	if roomData.Room.Id != expectedRoomId {
+		t.Error("DB manager did not fetch the correct room id:", roomData.Room.Id)
+	}
+
+	cleanUp(dbManager)
+}
+
+func TestGetRoomByName_whenRoomDoesNotExist_returnsNil(t *testing.T) {
+	dbManager, err := initDatabase()
+
+	if err != nil {
+		t.Error("Error when initializing the database", err)
+	}
+
+	expectedRoomName := testRoomName
+	roomData, err := dbManager.GetRoomByName(expectedRoomName)
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Error("DB manager should return no rows error when room doesn't exist")
+	}
+
+	if roomData != nil {
+		t.Error("DB manager should return nil room data when the room doesn't exist")
 	}
 
 	cleanUp(dbManager)
