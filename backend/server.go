@@ -220,7 +220,7 @@ func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.U
 	}
 
 	// cache the user id and username
-	s.userCache.AddUserToCache(userData.User.UserId, user.Username)
+	s.userCache.AddUserToCache(userData.User.UserId, user.Username, user.RoomId)
 
 	response.Username = user.Username
 	response.UserId = userData.User.UserId
@@ -285,7 +285,7 @@ func (s *BackendServer) getUsernameFromId(userId uint32) string {
 
 	// Add the username to the cache and return the name we found in the
 	// database
-	s.userCache.AddUserToCache(userId, userData.User.Username)
+	s.userCache.AddUserToCache(userId, userData.User.Username, userData.User.RoomId)
 	return userData.User.Username
 }
 
