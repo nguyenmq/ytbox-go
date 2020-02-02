@@ -31,7 +31,7 @@ type DbManager interface {
 	AddSong(song *cmpb.Song) error
 
 	// Add a new user to the users table and returns the user's id
-	AddUser(username string) (*UserData, error)
+	AddUser(username string, roomId uint32) (*UserData, error)
 
 	// Add a new room to the database
 	AddRoom(roomName string) (*RoomData, error)

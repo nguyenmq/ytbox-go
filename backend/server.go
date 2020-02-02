@@ -187,35 +187,46 @@ func (s *BackendServer) GetPlaylist(con context.Context, arg *cmpb.Empty) (*bepb
  * the database.
  */
 func (s *BackendServer) LoginUser(con context.Context, user *bepb.User) (*bepb.User, error) {
+	response := new(bepb.User)
+	response.Err = new(bepb.Error)
+	response.Err.Success = false
 	userData, err := s.dbManager.GetUserById(user.UserId)
 
 	if userData == nil {
-		// Something happened if user data is nil
-
 		if errors.Is(err, sql.ErrNoRows) {
 			// if no results were returned, then create a new user
-			userData, err = s.dbManager.AddUser(user.Username)
+			userData, err = s.dbManager.AddUser(user.Username, user.RoomId)
 			if err != nil {
-				log.Printf("Failed to add user: %s", user.Username)
-				return &bepb.User{Username: user.Username, UserId: 0}, nil
+				log.Printf("Failed to add user: %s, to room: %d, err: %s",
+					user.Username, user.RoomId, err.Error())
+				response.Username = user.Username
+				response.Err.Message = "Failed to add new user."
+				return response, nil
 			}
 		} else {
-			// else return an error to the rpc client
-			return &bepb.User{Username: user.Username, UserId: 0}, nil
+			response.Username = user.Username
+			response.Err.Message = "Failed to add new user."
+			return response, nil
 		}
 	} else if userData.User.Username != user.Username {
 		// Update the username in the database if the names differ
 		err = s.dbManager.UpdateUsername(user.Username, user.UserId)
 		if err != nil {
 			log.Println("Could not update username")
-			return &bepb.User{Username: user.Username, UserId: 0}, nil
+			response.Username = user.Username
+			response.Err.Message = "Could not update username."
+			return response, nil
 		}
 	}
 
 	// cache the user id and username
 	s.userCache.AddUserToCache(userData.User.UserId, user.Username)
 
-	return &bepb.User{Username: user.Username, UserId: userData.User.UserId}, nil
+	response.Username = user.Username
+	response.UserId = userData.User.UserId
+	response.RoomId = userData.User.RoomId
+	response.Err.Success = true
+	return response, nil
 }
 
 /*

@@ -83,6 +83,12 @@ message User {
 
     // the user's id
     uint32 userId = 2;
+
+    // the room id that the user belongs to
+    uint32 roomId = 3;
+
+    // error status
+    Error err = 4;
 }
 
 // A song eviction

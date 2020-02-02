@@ -20,8 +20,10 @@ const (
 		CREATE TABLE users (
 			user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT,
+			room_id INTEGER NOT NULL,
 			logged_in BOOLEAN NOT NULL,
-			last_access DATETIME NOT NULL); `
+			last_access DATETIME NOT NULL,
+			FOREIGN KEY (room_id) REFERENCES rooms(room_id));`
 
 	createRoomsTable = `
 		CREATE TABLE rooms (
@@ -55,7 +57,7 @@ const (
 
 	insertUser = `
 		INSERT INTO users VALUES
-		(NULL, ?, 1, datetime('now'));`
+		(NULL, ?, ?, 1, datetime('now'));`
 
 	queryUserById = `
 		SELECT * FROM users WHERE user_id = ?;`
@@ -145,7 +147,7 @@ func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
 /*
  * Add a new user to the database
  */
-func (mgr *SqliteManager) AddUser(username string) (*UserData, error) {
+func (mgr *SqliteManager) AddUser(username string, roomId uint32) (*UserData, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
@@ -156,7 +158,7 @@ func (mgr *SqliteManager) AddUser(username string) (*UserData, error) {
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(username)
+	res, err := stmt.Exec(username, roomId)
 	if err != nil {
 		log.Printf("Error adding new user: %v", err)
 		return nil, err
@@ -169,6 +171,8 @@ func (mgr *SqliteManager) AddUser(username string) (*UserData, error) {
 	}
 	log.Printf("Added new user: {name: %s, id: %d}", username, userId)
 
+	// todo: fix this. If there's an error in the retrieval, then the user gets
+	// created, but we return an error.
 	return mgr.unsyncGetUserById(uint32(userId))
 }
 
@@ -189,7 +193,7 @@ func (mgr *SqliteManager) unsyncGetUserById(userId uint32) (*UserData, error) {
 	userData := new(UserData)
 
 	err := mgr.db.QueryRow(queryUserById, userId).Scan(&userData.User.UserId,
-		&userData.User.Username, &userData.LoggedIn, &userData.LastAccess)
+		&userData.User.Username, &userData.User.RoomId, &userData.LoggedIn, &userData.LastAccess)
 
 	// if an error occurred or there was no result, then return nil
 	if err != nil {
@@ -277,15 +281,15 @@ func (mgr *SqliteManager) unsyncGetRoomByName(roomName string) (*RoomData, error
  * Creates a new database with the necessary tables
  */
 func foundDatabase(db *sql.DB) error {
-	_, err := db.Exec(createUsersTable)
+	_, err := db.Exec(createRoomsTable)
 	if err != nil {
-		log.Fatalf("Error creating users table: %v", err)
+		log.Fatalf("Error creating rooms table: %v", err)
 		return err
 	}
 
-	_, err = db.Exec(createRoomsTable)
+	_, err = db.Exec(createUsersTable)
 	if err != nil {
-		log.Fatalf("Error creating rooms table: %v", err)
+		log.Fatalf("Error creating users table: %v", err)
 		return err
 	}
 

@@ -81,7 +81,12 @@ func TestAddUser_when_success(t *testing.T) {
 		t.Error("Error when initializing the database", err)
 	}
 
-	userData, err := dbManager.AddUser(testUserName)
+	_, err = dbManager.AddRoom(testRoomName)
+	if err != nil {
+		t.Error("Error when adding new room", err)
+	}
+
+	userData, err := dbManager.AddUser(testUserName, testRoomId)
 	if err != nil {
 		t.Error("Error when adding new user", err)
 	}
@@ -91,9 +96,14 @@ func TestAddUser_when_success(t *testing.T) {
 		t.Error("Username should be", expectedUserName, "but was", userData.User.Username)
 	}
 
-	var expectedUserId uint32 = testUserId
+	expectedUserId := uint32(testUserId)
 	if userData.User.UserId != expectedUserId {
 		t.Error("User id should be", expectedUserId, "but was", userData.User.UserId)
+	}
+
+	expectedRoomId := uint32(testRoomId)
+	if userData.User.RoomId != expectedRoomId {
+		t.Error("User's room id should be", expectedRoomId, "but was", userData.User.RoomId)
 	}
 
 	cleanUp(dbManager)
@@ -111,7 +121,7 @@ func TestAddSong_when_success(t *testing.T) {
 		t.Error("Error when adding new room", err)
 	}
 
-	_, err = dbManager.AddUser(testUserName)
+	_, err = dbManager.AddUser(testUserName, testRoomId)
 	if err != nil {
 		t.Error("Error when adding new user", err)
 	}
@@ -136,13 +146,18 @@ func TestAddSong_whenRoomDoesNotExist_failToAdd(t *testing.T) {
 		t.Error("Error when initializing the database", err)
 	}
 
-	_, err = dbManager.AddUser(testUserName)
+	_, err = dbManager.AddRoom(testRoomName)
+	if err != nil {
+		t.Error("Error when adding new room", err)
+	}
+
+	_, err = dbManager.AddUser(testUserName, testRoomId)
 	if err != nil {
 		t.Error("Error when adding new user", err)
 	}
 
 	actualSong := testSong
-	actualSong.RoomId = testRoomId
+	actualSong.RoomId = testRoomId + 1
 	err = dbManager.AddSong(&actualSong)
 	if err == nil {
 		t.Error("DB manager did not return an error when adding a song with a room id that doesn't exist")

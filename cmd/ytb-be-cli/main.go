@@ -28,9 +28,10 @@ var (
 	playlist = app.Command("playlist", "Get current songs in the playlist.").Alias("ls")
 
 	// "login" subcommand
-	login     = app.Command("login", "Login as the given username.")
-	loginName = login.Arg("username", "Alias to login as.").Required().String()
-	loginId   = login.Arg("userId", "Id of the alias to login as.").Uint32()
+	login       = app.Command("login", "Login as the given username.")
+	loginName   = login.Arg("username", "Alias to login as.").Required().String()
+	loginRoomId = login.Arg("roomId", "Id of the room to log user into.").Required().Uint32()
+	loginId     = login.Arg("userId", "Id of the alias to login as.").Uint32()
 
 	// "next" subcommand
 	next = app.Command("next", "Skip to the next song.")
@@ -140,16 +141,18 @@ func popCommand(client bepb.YtbBackendClient) {
 }
 
 func loginCommand(client bepb.YtbBackendClient) {
-	user, err := client.LoginUser(context.Background(), &bepb.User{Username: *loginName, UserId: *loginId})
+	user, err := client.LoginUser(context.Background(), &bepb.User{Username: *loginName, UserId: *loginId, RoomId: *loginRoomId})
 	if err != nil {
 		fmt.Printf("failed to call LoginUser: %v\n", err)
 		os.Exit(1)
 	}
 
-	if user.UserId == 0 {
-		fmt.Println("Failed to login")
+	if user.Err.Success == false {
+		fmt.Println(user.Err.Message)
 	} else {
-		fmt.Printf("Logged in as: { %v}\n", user)
+		fmt.Printf("User name: %s\n", user.Username)
+		fmt.Printf("User id: %d\n", user.UserId)
+		fmt.Printf("Room id: %d\n", user.RoomId)
 	}
 }
 
