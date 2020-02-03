@@ -13,9 +13,8 @@ import (
 	"strconv"
 
 	"github.com/foolin/goview/supports/ginview"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/securecookie"
 
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
@@ -39,30 +38,27 @@ const (
 	AlertEmphWarn         = "Warning"
 	AlertEmphInfo         = "Info"
 	invalidUserId         = 0
+	cookieName            = "ytbox_cookie"
 )
 
 type FrontendServer struct {
-	addr   string         // ip address and port to listen on
-	client *BackendClient // the backend client
-	router *gin.Engine    // gin router
-	server *http.Server   // http server
-	store  cookie.Store   // session cookie store
+	addr   string                     // ip address and port to listen on
+	client *BackendClient             // the backend client
+	router *gin.Engine                // gin router
+	server *http.Server               // http server
+	cookie *securecookie.SecureCookie // secure cookie provider
 }
 
-func NewServer(addr string) *FrontendServer {
+func NewServer(addr string, hashKey []byte, blockKey []byte) *FrontendServer {
 	frontend := new(FrontendServer)
 	frontend.addr = addr
-	frontend.store = cookie.NewStore([]byte("tmp_secret"))
-	frontend.store.Options(sessions.Options{
-		MaxAge: 0,
-	})
+	frontend.cookie = securecookie.New(hashKey, blockKey)
 
 	// set up gin router
 	frontend.router = gin.Default()
 	frontend.router.HTMLRender = ginview.Default()
 	frontend.router.Static("/static", "./static")
 	frontend.router.StaticFile("/favicon.ico", "./static/img/favicon.ico")
-	frontend.router.Use(sessions.Sessions("yt_box", frontend.store))
 
 	// set up the http server
 	frontend.server = new(http.Server)
@@ -104,9 +100,9 @@ func (s *FrontendServer) Stop() {
 }
 
 func (s *FrontendServer) HandleIndex(context *gin.Context) {
-	session := sessions.Default(context)
+	userId, err := s.getUserIdCookie(context)
 
-	if session.Get("user_id") == nil {
+	if err != nil {
 		context.Redirect(http.StatusTemporaryRedirect, "/login")
 	} else {
 		title := "No song is currently playing"
@@ -120,8 +116,6 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 
 		playlist, err := s.client.GetPlaylist()
 
-		user_id := session.Get("user_id").(uint32)
-
 		context.HTML(http.StatusOK, "index", gin.H{
 			"title":                "yt-box: Song Queue",
 			"now_playing":          title,
@@ -129,7 +123,7 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 			"song":                 current_song,
 			"song_count":           len(playlist.Songs),
 			"queue":                playlist.Songs,
-			"session_user_id":      user_id,
+			"session_user_id":      userId,
 			"increment_index":      increment_index,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
@@ -139,19 +133,19 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 
 func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 	playlist, err := s.client.GetPlaylist()
-
-	session := sessions.Default(context)
-	user_id := session.Get("user_id")
-
 	if err != nil {
 		buildErrorResponse(context, http.StatusInternalServerError, err)
-	} else if user_id == nil {
+		return
+	}
+
+	userId, err := s.getUserIdCookie(context)
+	if err != nil {
 		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 	} else {
 		context.HTML(http.StatusOK, "layouts/queue.html", gin.H{
 			"song_count":           len(playlist.Songs),
 			"queue":                playlist.Songs,
-			"session_user_id":      user_id.(uint32),
+			"session_user_id":      userId,
 			"increment_index":      increment_index,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
@@ -167,15 +161,13 @@ func (s *FrontendServer) HandleNewSong(context *gin.Context) {
 		return
 	}
 
-	session := sessions.Default(context)
-	user_id := session.Get("user_id")
-
-	if user_id == nil {
+	userId, err := s.getUserIdCookie(context)
+	if err != nil {
 		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 		return
 	}
 
-	_, err := s.client.SendNewSong(link, user_id.(uint32))
+	_, err = s.client.SendNewSong(link, userId)
 	if err != nil {
 		buildErrorResponse(context, http.StatusInternalServerError, err)
 	} else {
@@ -193,16 +185,15 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 		title = truncate_song_title(current_song.Title, titleMaxLength)
 	}
 
-	session := sessions.Default(context)
-	user_id := session.Get("user_id")
+	userId, err := s.getUserIdCookie(context)
 
-	if user_id == nil {
+	if err != nil {
 		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 	} else {
 		context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
 			"now_playing":          title,
 			"has_song_playing":     has_song_playing,
-			"session_user_id":      user_id.(uint32),
+			"session_user_id":      userId,
 			"song":                 current_song,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
@@ -220,15 +211,14 @@ func (s *FrontendServer) HandleRemove(context *gin.Context) {
 	}
 
 	song_id, err := strconv.ParseUint(song_id_str, 10, 32)
-	session := sessions.Default(context)
-	user_id := session.Get("user_id")
 
-	if user_id == nil {
+	userId, err := s.getUserIdCookie(context)
+	if err != nil {
 		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 		return
 	}
 
-	_, err = s.client.RemoveSong(uint32(song_id), user_id.(uint32))
+	_, err = s.client.RemoveSong(uint32(song_id), userId)
 	if err != nil {
 		buildErrorResponse(context, http.StatusInternalServerError, err)
 	} else {
@@ -264,23 +254,24 @@ func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
 		return
 	}
 
-	session := sessions.Default(context)
-	session.Set("user_id", user.UserId)
-	session.Save()
+	if err = s.setUserIdCookie(context, user.UserId); err != nil {
+		buildLoginErrorPage(context, userName, roomName, err)
+		return
+	}
+
 	context.Redirect(http.StatusMovedPermanently, "/")
 }
 
 func (s *FrontendServer) HandleNextSong(context *gin.Context) {
 	current_song, _ := s.client.GetNowPlaying()
-	session := sessions.Default(context)
-	user_id := session.Get("user_id")
 
-	if user_id == nil {
+	userId, err := s.getUserIdCookie(context)
+	if err != nil {
 		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 		return
 	}
 
-	if s.matchesSessionUser(current_song.UserId, user_id.(uint32)) {
+	if s.matchesSessionUser(current_song.UserId, userId) {
 		s.client.NextSong()
 	}
 
@@ -329,4 +320,43 @@ func buildErrorResponse(context *gin.Context, code int, err error) {
 		"alert_emph": AlertEmphError,
 		"alert_msg":  err.Error(),
 	})
+}
+
+func (s *FrontendServer) setUserIdCookie(context *gin.Context, userId uint32) error {
+	value := map[string]uint32{
+		"user_id": userId,
+	}
+
+	encoded, err := s.cookie.Encode(cookieName, value)
+	if err == nil {
+		cookie := &http.Cookie{
+			Name:   cookieName,
+			Value:  encoded,
+			Path:   "/",
+			MaxAge: 31556952,
+		}
+		http.SetCookie(context.Writer, cookie)
+		return nil
+	}
+
+	return err
+}
+
+func (s *FrontendServer) getUserIdCookie(context *gin.Context) (uint32, error) {
+	cookie, err := context.Request.Cookie(cookieName)
+	if err == nil {
+		value := make(map[string]uint32)
+		err = s.cookie.Decode(cookieName, cookie.Value, &value)
+		if err == nil {
+			userId, exists := value["user_id"]
+
+			if exists {
+				return userId, nil
+			} else {
+				return 0, ErrMissingSessionToken
+			}
+		}
+	}
+
+	return 0, ErrMissingSessionToken
 }

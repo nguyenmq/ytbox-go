@@ -5,6 +5,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -19,9 +20,11 @@ import (
  * Command line arguments
  */
 var (
-	app  = kingpin.New(frontend.LogPrefix, "yt_box frontend server")
-	all  = app.Flag("all", "Listen on all interfaces. Only listens on localhost by default.").Short('a').Bool()
-	port = app.Flag("port", "Port to listen on").Default("9008").Short('p').String()
+	app       = kingpin.New(frontend.LogPrefix, "yt_box frontend server")
+	all       = app.Flag("all", "Listen on all interfaces. Only listens on localhost by default.").Short('a').Bool()
+	port      = app.Flag("port", "Port to listen on").Default("9008").Short('p').String()
+	hashFile  = app.Flag("hash", "File containing hash key").Default("hash.key").String()
+	blockFile = app.Flag("block", "File containing block key").Default("block.key").String()
 )
 
 func main() {
@@ -36,7 +39,19 @@ func main() {
 		addr = "0.0.0.0"
 	}
 
-	server := frontend.NewServer(addr + ":" + *port)
+	hashKey, err := ioutil.ReadFile(*hashFile)
+	if err != nil {
+		log.Printf("Could not read hash key file at %s with error: %s\n", *hashFile, err.Error())
+		os.Exit(1)
+	}
+
+	blockKey, err := ioutil.ReadFile(*blockFile)
+	if err != nil {
+		log.Printf("Could not read block key file at %s with error: %s\n", *blockFile, err.Error())
+		os.Exit(1)
+	}
+
+	server := frontend.NewServer(addr+":"+*port, []byte(hashKey), []byte(blockKey))
 
 	go func() {
 		stop := make(chan os.Signal)
