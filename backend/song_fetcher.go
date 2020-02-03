@@ -5,16 +5,18 @@
 package backend
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/dhowden/tag"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	"google.golang.org/api/option"
+	"google.golang.org/api/youtube/v3"
 )
 
 var (
@@ -23,16 +25,46 @@ var (
 
 	// match youtube links
 	validYt = regexp.MustCompile(`^(https?://)(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
+
+	// match the full length youtube url
+	fullYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?youtube\.com/watch(\S+)$`)
+
+	// match the shortened youtube url
+	shortYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?youtu\.be/(\S+)$`)
+
+	// full length youtube url uses a query parameter
+	videoQueryParam = regexp.MustCompile(`v=[A-Za-z0-9_\-]+`)
+
+	// shortened youtube url uses a path parameter
+	videoPathParam = regexp.MustCompile(`be/[A-Za-z0-9_\-]+`)
 )
 
-func fetchSongData(link string, song *cmpb.Song) error {
+type SongFetcher struct {
+	ytService *youtube.Service
+}
+
+func (fetcher *SongFetcher) init(apiKey string) {
+	fetcher.ytService, _ = youtube.NewService(context.Background(), option.WithAPIKey(apiKey))
+}
+
+func (fetcher *SongFetcher) fetchSongData(link string, song *cmpb.Song) error {
 	if validYt.MatchString(link) {
-		return fetchYoutubeSongData(link, song)
+		return fetcher.fetchYoutubeSongData(link, song)
 	} else if validFile.MatchString(link) {
-		return fetchLocalSongData(link, song)
+		return fetcher.fetchLocalSongData(link, song)
 	} else {
 		err := errors.New(fmt.Sprintf("Unknown link submitted: %s", link))
 		return err
+	}
+}
+
+func extractVideoId(link string) string {
+	if fullYoutubeLink.MatchString(link) {
+		return strings.TrimPrefix(videoQueryParam.FindString(link), "v=")
+	} else if shortYoutubeLink.MatchString(link) {
+		return strings.TrimPrefix(videoPathParam.FindString(link), "be/")
+	} else {
+		return ""
 	}
 }
 
@@ -41,22 +73,25 @@ func fetchSongData(link string, song *cmpb.Song) error {
  * id, and service type. Currently only YouTube links are supported. Populates
  * the Song structure with the song data it retrieves. Returns an error status.
  */
-func fetchYoutubeSongData(link string, song *cmpb.Song) error {
-	out, err := exec.Command("youtube-dl", "-e", "--get-id", link).Output()
+func (fetcher *SongFetcher) fetchYoutubeSongData(link string, song *cmpb.Song) error {
+	songId := extractVideoId(link)
+	if len(songId) == 0 {
+		log.Printf("Failed to extract id from link: %s\n", link)
+		return errors.New("Failed to extract song id")
+	}
+
+	request := fetcher.ytService.Videos.List("snippet,contentDetails")
+	request.Id(songId)
+	response, err := request.Do()
 
 	if err != nil {
-		log.Printf("Failed to run youtube-dl with error: %v", err)
-		return errors.New("Failed to fetch song data")
+		log.Printf("Failed to fetch song data for %s with error: %s\n", songId, err.Error())
+		return errors.New("Failed to fetch song metadata")
 	}
 
-	parsed := strings.Split(string(out[:]), "\n")
-	if len(parsed) < 2 {
-		log.Printf("Unexpected response from YouTube: %v", parsed)
-		return errors.New("Failed to fetch song data")
-	}
-
-	song.Title = parsed[0]
-	song.ServiceId = parsed[1]
+	item := response.Items[0]
+	song.Title = item.Snippet.Title
+	song.ServiceId = songId
 	song.Service = cmpb.ServiceType_Youtube
 
 	return nil
@@ -65,7 +100,7 @@ func fetchYoutubeSongData(link string, song *cmpb.Song) error {
 /*
  * Read the metadata out of a local mp3 or flac file
  */
-func fetchLocalSongData(link string, song *cmpb.Song) error {
+func (fetcher *SongFetcher) fetchLocalSongData(link string, song *cmpb.Song) error {
 	file, err := os.Open(link)
 	if err != nil {
 		log.Printf("Failed to read file %s: %v", link, err)

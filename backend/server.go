@@ -5,6 +5,7 @@
 package backend
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"io"
@@ -14,7 +15,6 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
@@ -40,12 +40,13 @@ type BackendServer struct {
 	userCache *UserCache               // user identity cache
 	playerMgr *playerManager           // player manager
 	streamWG  sync.WaitGroup           // wait group for streaming goroutines
+	fetcher   *SongFetcher             // Song metadata fetcher
 }
 
 /*
  * Create a new yt_box backend server
  */
-func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
+func NewServer(addr string, loadFile string, dbPath string, ytApiKey string) *BackendServer {
 	var err error
 
 	// initialize the backend server struct
@@ -80,6 +81,10 @@ func NewServer(addr string, loadFile string, dbPath string) *BackendServer {
 	// initialize the player manager
 	server.playerMgr = new(playerManager)
 	server.playerMgr.init(server.queueMgr)
+
+	// initialize the song fetcher
+	server.fetcher = new(SongFetcher)
+	server.fetcher.init(ytApiKey)
 
 	return server
 }
@@ -123,7 +128,7 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 		return response, nil
 	}
 
-	err := fetchSongData(sub.Link, song)
+	err := s.fetcher.fetchSongData(sub.Link, song)
 	if err != nil {
 		response.Message = err.Error()
 		log.Println(err.Error())
