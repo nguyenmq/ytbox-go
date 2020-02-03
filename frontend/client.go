@@ -5,7 +5,6 @@
 package frontend
 
 import (
-	"errors"
 	"log"
 
 	"golang.org/x/net/context"
@@ -14,9 +13,6 @@ import (
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
-
-var ErrFailedLogin = errors.New("Failed to login user")
-var ErrRoomNotFound = errors.New("Room name was not found")
 
 type BackendClient struct {
 	connection *grpc.ClientConn      // grpc connection
@@ -100,7 +96,7 @@ func (c *BackendClient) LoginNewUser(userName string, roomName string) (*bepb.Us
 		return nil, err
 	}
 	if !room.Err.Success {
-		log.Printf("Request room %s does not exist\n", roomName)
+		log.Printf("Requested room %s does not exist\n", roomName)
 		return nil, ErrRoomNotFound
 	}
 

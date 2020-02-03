@@ -16,6 +16,12 @@
                 {{template "now_playing" .}}
             </div>
 
+            <div id="alert_area">
+                {{if .has_alert}}
+                    {{include "layouts/alert"}}
+                {{end}}
+            </div>
+
             <div id="submit_form">
                 {{template "input_form" .}}
             </div>

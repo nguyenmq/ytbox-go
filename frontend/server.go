@@ -5,6 +5,7 @@
 package frontend
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,9 +20,18 @@ import (
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
+var ErrFailedLogin = errors.New("Failed to login user")
+var ErrRoomNotFound = errors.New("Room name was not found")
+var ErrMissingUserName = errors.New("Missing display name")
+var ErrMissingRoomName = errors.New("Missing room name")
+
 const (
 	LogPrefix      string = "ytb-fe" // logging prefix name
 	titleMaxLength int    = 100      // the maximum length of the now playing title
+	AlertSuccess          = "success"
+	AlertInfo             = "info"
+	AlertWarning          = "warning"
+	AlertError            = "danger"
 )
 
 type FrontendServer struct {
@@ -211,23 +221,35 @@ func (s *FrontendServer) HandleLoginPage(context *gin.Context) {
 	})
 }
 
+func buildLoginErrorPage(context *gin.Context, userName string, roomName string, err error) {
+	context.HTML(http.StatusBadRequest, "login", gin.H{
+		"title":      "yt-box: Login",
+		"user_name":  userName,
+		"room_name":  roomName,
+		"has_alert":  true,
+		"alert_emph": "Error",
+		"alert_type": AlertError,
+		"alert_msg":  err.Error(),
+	})
+}
+
 func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
-	userName, exists := context.GetPostForm("user_name_box")
-	if !exists || len(userName) == 0 {
-		context.String(http.StatusBadRequest, "Failed to get a valid login request: missing user name")
+	userName, _ := context.GetPostForm("user_name_box")
+	roomName, _ := context.GetPostForm("room_name_box")
+
+	if len(userName) == 0 {
+		buildLoginErrorPage(context, userName, roomName, ErrMissingUserName)
 		return
 	}
 
-	roomName, exists := context.GetPostForm("room_name_box")
-	if !exists || len(roomName) == 0 {
-		context.String(http.StatusBadRequest, "Failed to get a valid login request: missing room name")
+	if len(roomName) == 0 {
+		buildLoginErrorPage(context, userName, roomName, ErrMissingRoomName)
 		return
 	}
 
 	user, err := s.client.LoginNewUser(userName, roomName)
-
 	if err != nil {
-		context.String(http.StatusInternalServerError, "Failed to login user")
+		buildLoginErrorPage(context, userName, roomName, err)
 		return
 	}
 
