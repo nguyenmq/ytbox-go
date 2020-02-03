@@ -130,6 +130,7 @@ func (mgr *SqliteManager) AddSong(song *cmpb.Song) error {
 	res, err := stmt.Exec(song.Title, song.Service, song.ServiceId, song.UserId, song.RoomId)
 	if err != nil {
 		log.Printf("Error adding new song: %v", err)
+		log.Printf("Attempted to add song: %v", song)
 		return err
 	}
 
@@ -169,7 +170,7 @@ func (mgr *SqliteManager) AddUser(username string, roomId uint32) (*UserData, er
 		log.Printf("Error getting auto-increment id of new user: %v", err)
 		return nil, err
 	}
-	log.Printf("Added new user: {name: %s, id: %d}", username, userId)
+	log.Printf("Added new user: {name: %s, id: %d, room: %d}", username, userId, roomId)
 
 	// todo: fix this. If there's an error in the retrieval, then the user gets
 	// created, but we return an error.

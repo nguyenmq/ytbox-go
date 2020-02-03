@@ -4,16 +4,22 @@
 
 {{define "now_playing"}}
     <div class="jumbotron">
-        <img src="/static/img/ytbox_sign_white.svg" alt="yt_box logo" class="img-responsive" id="logo">
+        <img src="/static/img/ytbox_tilt_white.svg" alt="yt_box logo" class="img-responsive" id="logo">
     </div>
 {{end}}
 
-{{define "button_label"}}
-    Set Your Display Name:
-{{end}}
+{{define "input_form"}}
+    <form role="form" id="link_form" method="post" action="">
+        <div class="form-group">
+            <label for="room_name_box">Name of your yt-box room:</label>
+            <input id="room_name_box" type="text" class="form-control" name="room_name_box" value="{{.room_name}}">
+            <br>
+            <label for="user_name_box">Set your display name:</label>
+            <input id="user_name_box" type="text" class="form-control" name="user_name_box">
+        </div>
 
-{{define "button_type"}}
-    <button id="login_btn" class="btn btn-default btn-lg">Enter</button>
+        <button id="login_btn" class="btn btn-default btn-lg">Enter</button>
+    </form>
 {{end}}
 
 {{define "song_queue"}}

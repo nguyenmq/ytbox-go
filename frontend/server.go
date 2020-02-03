@@ -114,8 +114,8 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 			"queue":                playlist.Songs,
 			"session_user_id":      user_id,
 			"increment_index":      increment_index,
-			"transform_user_name":  s.TransformUsername,
-			"matches_session_user": s.MatchesSessionUser,
+			"transform_user_name":  s.transformUsername,
+			"matches_session_user": s.matchesSessionUser,
 		})
 	}
 }
@@ -134,8 +134,8 @@ func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 			"queue":                playlist.Songs,
 			"session_user_id":      user_id,
 			"increment_index":      increment_index,
-			"transform_user_name":  s.TransformUsername,
-			"matches_session_user": s.MatchesSessionUser,
+			"transform_user_name":  s.transformUsername,
+			"matches_session_user": s.matchesSessionUser,
 		})
 	}
 }
@@ -177,8 +177,8 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 		"has_song_playing":     has_song_playing,
 		"song":                 current_song,
 		"session_user_id":      user_id,
-		"transform_user_name":  s.TransformUsername,
-		"matches_session_user": s.MatchesSessionUser,
+		"transform_user_name":  s.transformUsername,
+		"matches_session_user": s.matchesSessionUser,
 	})
 }
 
@@ -206,19 +206,25 @@ func (s *FrontendServer) HandleRemove(context *gin.Context) {
 func (s *FrontendServer) HandleLoginPage(context *gin.Context) {
 	// todo: check for cookie and redirect if already have cookie
 	context.HTML(http.StatusOK, "login", gin.H{
-		"title": "yt-box: Login",
+		"title":     "yt-box: Login",
+		"room_name": context.Query("room"),
 	})
 }
 
 func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
-	user_name, exists := context.GetPostForm("submit_box")
-
-	if exists == false {
-		context.String(http.StatusInternalServerError, "Failed to get a valid login request")
+	userName, exists := context.GetPostForm("user_name_box")
+	if !exists || len(userName) == 0 {
+		context.String(http.StatusBadRequest, "Failed to get a valid login request: missing user name")
 		return
 	}
 
-	user, err := s.client.LoginNewUser(user_name)
+	roomName, exists := context.GetPostForm("room_name_box")
+	if !exists || len(roomName) == 0 {
+		context.String(http.StatusBadRequest, "Failed to get a valid login request: missing room name")
+		return
+	}
+
+	user, err := s.client.LoginNewUser(userName, roomName)
 
 	if err != nil {
 		context.String(http.StatusInternalServerError, "Failed to login user")
@@ -236,14 +242,14 @@ func (s *FrontendServer) HandleNextSong(context *gin.Context) {
 	session := sessions.Default(context)
 	user_id := session.Get("user_id").(uint32)
 
-	if s.MatchesSessionUser(current_song.UserId, user_id) {
+	if s.matchesSessionUser(current_song.UserId, user_id) {
 		s.client.NextSong()
 	}
 
 	context.Status(http.StatusOK)
 }
 
-func (s *FrontendServer) TransformUsername(song *cmpb.Song, session_user_id uint32) string {
+func (s *FrontendServer) transformUsername(song *cmpb.Song, session_user_id uint32) string {
 	if song.UserId == session_user_id {
 		return "You"
 	} else {
@@ -251,7 +257,7 @@ func (s *FrontendServer) TransformUsername(song *cmpb.Song, session_user_id uint
 	}
 }
 
-func (s *FrontendServer) MatchesSessionUser(user_id uint32, session_user_id uint32) bool {
+func (s *FrontendServer) matchesSessionUser(user_id uint32, session_user_id uint32) bool {
 	return user_id == session_user_id
 }
 

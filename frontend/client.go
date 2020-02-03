@@ -5,6 +5,7 @@
 package frontend
 
 import (
+	"errors"
 	"log"
 
 	"golang.org/x/net/context"
@@ -13,6 +14,9 @@ import (
 	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
+
+var ErrFailedLogin = errors.New("Failed to login user")
+var ErrRoomNotFound = errors.New("Room name was not found")
 
 type BackendClient struct {
 	connection *grpc.ClientConn      // grpc connection
@@ -87,19 +91,29 @@ func (c *BackendClient) RemoveSong(song_id uint32, user_id uint32) (*bepb.Error,
 	return response, err
 }
 
-func (c *BackendClient) LoginNewUser(user_name string) (*bepb.User, error) {
-	var user_request = bepb.User{
-		Username: user_name,
+func (c *BackendClient) LoginNewUser(userName string, roomName string) (*bepb.User, error) {
+	roomRequest := bepb.Room{Name: roomName}
+
+	room, err := c.be_client.GetRoom(context.Background(), &roomRequest)
+	if err != nil {
+		log.Printf("Failed to describe room with error: %v\n", err)
+		return nil, err
+	}
+	if !room.Err.Success {
+		log.Printf("Request room %s does not exist\n", roomName)
+		return nil, ErrRoomNotFound
 	}
 
-	user, err := c.be_client.LoginUser(context.Background(), &user_request)
-
+	userRequest := bepb.User{Username: userName, RoomId: room.Id}
+	user, err := c.be_client.LoginUser(context.Background(), &userRequest)
 	if err != nil {
 		log.Printf("Failed to login user with error: %v\n", err)
+		return nil, err
 	}
 
 	if user.UserId == 0 {
 		log.Printf("Failed to login")
+		return nil, ErrFailedLogin
 	}
 
 	return user, err

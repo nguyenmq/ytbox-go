@@ -116,7 +116,7 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 	song := new(cmpb.Song)
 	song.UserId = sub.GetUserId()
 
-	song.Username = s.getUsernameFromId(song.UserId)
+	song.Username, song.RoomId = s.getUserFromId(song.UserId)
 	if song.Username == "" {
 		response.Message = "Song submitted by unknown user"
 		log.Printf(response.Message)
@@ -264,29 +264,30 @@ func (s *BackendServer) SavePlaylist(con context.Context, fname *bepb.FilePath) 
  * Returns the username associated with the user id. An empty string is
  * returned if there was an error or the user id wasn't found.
  */
-func (s *BackendServer) getUsernameFromId(userId uint32) string {
+func (s *BackendServer) getUserFromId(userId uint32) (string, uint32) {
 	if userId == 0 {
-		log.Println("User id of zero was passed into getUsernameFromId")
-		return ""
+		log.Println("User id of zero was passed into getUserFromId")
+		return "", 0
 	}
 
 	// check the user identities cache for the name
 	username, exists := s.userCache.LookupUsername(userId)
 	if exists {
-		return username
+		roomId, _ := s.userCache.LookupRoomId(userId)
+		return username, roomId
 	}
 
 	// retrieve the name from the database if the user isn't in the cache
 	userData, err := s.dbManager.GetUserById(userId)
 	if err != nil {
 		log.Printf("Failed to get username from database with id: %d", userId)
-		return ""
+		return "", 0
 	}
 
 	// Add the username to the cache and return the name we found in the
 	// database
 	s.userCache.AddUserToCache(userId, userData.User.Username, userData.User.RoomId)
-	return userData.User.Username
+	return userData.User.Username, userData.User.RoomId
 }
 
 /*

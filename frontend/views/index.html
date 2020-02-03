@@ -7,12 +7,15 @@
     {{include "layouts/now_playing"}}
 {{end}}
 
-{{define "button_label"}}
-    Enter a YouTube Link:
-{{end}}
+{{define "input_form"}}
+    <form role="form" id="link_form" method="post" action="">
+        <div class="form-group">
+            <label for="submit_box">Enter a YouTube Link:</label>
+            <input id="submit_box" type="text" class="form-control" name="submit_box">
+        </div>
 
-{{define "button_type"}}
-    <button id="submit_btn" class="btn-default btn-lg">Submit Link</button>
+        <button id="submit_btn" class="btn-default btn-lg">Submit Link</button>
+    </form>
 {{end}}
 
 {{define "song_queue"}}

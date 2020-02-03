@@ -17,13 +17,7 @@
             </div>
 
             <div id="submit_form">
-                <form role="form" id="link_form" method="post" action="">
-                    <div class="form-group">
-                        <label for="submit_box">{{template "button_label"}}</label>
-                        <input id="submit_box" type="text" class="form-control" name="submit_box">
-                    </div>
-                    {{template "button_type"}}
-                </form>
+                {{template "input_form" .}}
             </div>
 
             {{template "song_queue" .}}
