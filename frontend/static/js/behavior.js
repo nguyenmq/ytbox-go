@@ -15,7 +15,7 @@ $(document).ready(function(){
             type: "POST",
             data: $("input"),
             error: function(jqXHR, textStatus, errorThrown) {
-                if(jqXHR.status == 500) {
+                if(jqXHR.status == 500 || jqXHR.status == 400) {
                     $("#alert_area").empty();
                     $("#alert_area").append(jqXHR.responseText);
                 } else {
@@ -50,7 +50,7 @@ $(document).ready(function(){
             type: "GET",
             dataType: "html",
             error: function(jqXHR, textStatus, errorThrown) {
-                if(jqXHR.status == 500) {
+                if(jqXHR.status == 500 || jqXHR.status == 400) {
                     $("#alert_area").empty();
                     $("#alert_area").append(jqXHR.responseText);
                 } else {
@@ -69,7 +69,7 @@ $(document).ready(function(){
                     type: "GET",
                     dataType: "html",
                     error: function(jqXHR, textStatus, errorThrown) {
-                        if(jqXHR.status == 500) {
+                        if(jqXHR.status == 500 || jqXHR.status == 400) {
                             $("#alert_area").empty();
                             $("#alert_area").append(jqXHR.responseText);
                         } else {
@@ -100,7 +100,7 @@ $(document).ready(function(){
             type: "POST",
             data: { 'song_id' : event.currentTarget.id },
             error: function(jqXHR, textStatus, errorThrown) {
-                if(jqXHR.status == 500) {
+                if(jqXHR.status == 500 || jqXHR.status == 400) {
                     $("#alert_area").empty();
                     $("#alert_area").append(jqXHR.responseText);
                 } else {
@@ -122,7 +122,7 @@ $(document).ready(function(){
             type: "GET",
             data: { 'song_id' : event.currentTarget.id },
             error: function(jqXHR, textStatus, errorThrown) {
-                if(jqXHR.status == 500) {
+                if(jqXHR.status == 500 || jqXHR.status == 400) {
                     $("#alert_area").empty();
                     $("#alert_area").append(jqXHR.responseText);
                 } else {

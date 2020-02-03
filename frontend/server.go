@@ -20,10 +20,13 @@ import (
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
-var ErrFailedLogin = errors.New("Failed to login user")
-var ErrRoomNotFound = errors.New("Room name was not found")
-var ErrMissingUserName = errors.New("Missing display name")
-var ErrMissingRoomName = errors.New("Missing room name")
+var ErrFailedLogin = errors.New("Failed to login user.")
+var ErrRoomNotFound = errors.New("Room name was not found.")
+var ErrMissingUserName = errors.New("Missing display name.")
+var ErrMissingRoomName = errors.New("Missing room name.")
+var ErrMissingSessionToken = errors.New("Missing session token. Please log back in.")
+var ErrMissingLink = errors.New("Missing song link.")
+var ErrRemoveMissingSong = errors.New("Did not supply a song to remove.")
 
 const (
 	LogPrefix      string = "ytb-fe" // logging prefix name
@@ -32,6 +35,10 @@ const (
 	AlertInfo             = "info"
 	AlertWarning          = "warning"
 	AlertError            = "danger"
+	AlertEmphError        = "Error"
+	AlertEmphWarn         = "Warning"
+	AlertEmphInfo         = "Info"
+	invalidUserId         = 0
 )
 
 type FrontendServer struct {
@@ -134,15 +141,17 @@ func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 	playlist, err := s.client.GetPlaylist()
 
 	session := sessions.Default(context)
-	user_id := session.Get("user_id").(uint32)
+	user_id := session.Get("user_id")
 
 	if err != nil {
-		context.String(http.StatusInternalServerError, "Failed to retrieve playlist")
+		buildErrorResponse(context, http.StatusInternalServerError, err)
+	} else if user_id == nil {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
 	} else {
 		context.HTML(http.StatusOK, "layouts/queue.html", gin.H{
 			"song_count":           len(playlist.Songs),
 			"queue":                playlist.Songs,
-			"session_user_id":      user_id,
+			"session_user_id":      user_id.(uint32),
 			"increment_index":      increment_index,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
@@ -151,21 +160,26 @@ func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 }
 
 func (s *FrontendServer) HandleNewSong(context *gin.Context) {
-	link, exists := context.GetPostForm("submit_box")
+	link, _ := context.GetPostForm("submit_box")
 
-	if exists == false {
-		context.String(http.StatusInternalServerError, "Failed to submit song")
+	if len(link) == 0 {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingLink)
 		return
 	}
 
 	session := sessions.Default(context)
-	user_id := session.Get("user_id").(uint32)
+	user_id := session.Get("user_id")
 
-	_, err := s.client.SendNewSong(link, user_id)
+	if user_id == nil {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
+		return
+	}
+
+	_, err := s.client.SendNewSong(link, user_id.(uint32))
 	if err != nil {
-		context.String(http.StatusInternalServerError, "Failed to submit song")
+		buildErrorResponse(context, http.StatusInternalServerError, err)
 	} else {
-		context.String(http.StatusOK, "Success")
+		context.Status(http.StatusOK)
 	}
 }
 
@@ -180,16 +194,20 @@ func (s *FrontendServer) HandleNowPlaying(context *gin.Context) {
 	}
 
 	session := sessions.Default(context)
-	user_id := session.Get("user_id").(uint32)
+	user_id := session.Get("user_id")
 
-	context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
-		"now_playing":          title,
-		"has_song_playing":     has_song_playing,
-		"song":                 current_song,
-		"session_user_id":      user_id,
-		"transform_user_name":  s.transformUsername,
-		"matches_session_user": s.matchesSessionUser,
-	})
+	if user_id == nil {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
+	} else {
+		context.HTML(http.StatusOK, "layouts/now_playing.html", gin.H{
+			"now_playing":          title,
+			"has_song_playing":     has_song_playing,
+			"session_user_id":      user_id.(uint32),
+			"song":                 current_song,
+			"transform_user_name":  s.transformUsername,
+			"matches_session_user": s.matchesSessionUser,
+		})
+	}
 }
 
 func (s *FrontendServer) HandleRemove(context *gin.Context) {
@@ -197,19 +215,24 @@ func (s *FrontendServer) HandleRemove(context *gin.Context) {
 	song_id_str, exists := context.GetPostForm("song_id")
 
 	if exists == false {
-		context.String(http.StatusBadRequest, "Did not get a song to delete")
+		buildErrorResponse(context, http.StatusBadRequest, ErrRemoveMissingSong)
 		return
 	}
 
 	song_id, err := strconv.ParseUint(song_id_str, 10, 32)
 	session := sessions.Default(context)
-	user_id := session.Get("user_id").(uint32)
+	user_id := session.Get("user_id")
 
-	_, err = s.client.RemoveSong(uint32(song_id), user_id)
+	if user_id == nil {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
+		return
+	}
+
+	_, err = s.client.RemoveSong(uint32(song_id), user_id.(uint32))
 	if err != nil {
-		context.String(http.StatusInternalServerError, "Failed to remove song")
+		buildErrorResponse(context, http.StatusInternalServerError, err)
 	} else {
-		context.String(http.StatusOK, "Success")
+		context.Status(http.StatusOK)
 	}
 }
 
@@ -218,18 +241,6 @@ func (s *FrontendServer) HandleLoginPage(context *gin.Context) {
 	context.HTML(http.StatusOK, "login", gin.H{
 		"title":     "yt-box: Login",
 		"room_name": context.Query("room"),
-	})
-}
-
-func buildLoginErrorPage(context *gin.Context, userName string, roomName string, err error) {
-	context.HTML(http.StatusBadRequest, "login", gin.H{
-		"title":      "yt-box: Login",
-		"user_name":  userName,
-		"room_name":  roomName,
-		"has_alert":  true,
-		"alert_emph": "Error",
-		"alert_type": AlertError,
-		"alert_msg":  err.Error(),
 	})
 }
 
@@ -262,9 +273,14 @@ func (s *FrontendServer) HandleLoginPost(context *gin.Context) {
 func (s *FrontendServer) HandleNextSong(context *gin.Context) {
 	current_song, _ := s.client.GetNowPlaying()
 	session := sessions.Default(context)
-	user_id := session.Get("user_id").(uint32)
+	user_id := session.Get("user_id")
 
-	if s.matchesSessionUser(current_song.UserId, user_id) {
+	if user_id == nil {
+		buildErrorResponse(context, http.StatusBadRequest, ErrMissingSessionToken)
+		return
+	}
+
+	if s.matchesSessionUser(current_song.UserId, user_id.(uint32)) {
 		s.client.NextSong()
 	}
 
@@ -293,4 +309,24 @@ func truncate_song_title(title string, length int) string {
 	}
 
 	return title
+}
+
+func buildLoginErrorPage(context *gin.Context, userName string, roomName string, err error) {
+	context.HTML(http.StatusBadRequest, "login", gin.H{
+		"title":      "yt-box: Login",
+		"user_name":  userName,
+		"room_name":  roomName,
+		"has_alert":  true,
+		"alert_emph": AlertEmphError,
+		"alert_type": AlertError,
+		"alert_msg":  err.Error(),
+	})
+}
+
+func buildErrorResponse(context *gin.Context, code int, err error) {
+	context.HTML(code, "layouts/alert.html", gin.H{
+		"alert_type": AlertError,
+		"alert_emph": AlertEmphError,
+		"alert_msg":  err.Error(),
+	})
 }
