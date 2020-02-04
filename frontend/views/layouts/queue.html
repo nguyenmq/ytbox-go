@@ -9,29 +9,33 @@
     <tbody>
         {{range $index, $song := .queue}}
         <tr class="vid_row" >
-            <td class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">
-                {{call $.increment_index $index}}.
+            <td>
+                <img src="{{call $.transform_thumbnail $song}}" alt="{{$song.Title}}" height=80>
             </td>
             <td>
-                <p class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">{{$song.Title}}</p>
-                <dl class="collapse" id="vid_{{$index}}">
-                    <dt>
-                        Submitted by {{call $.transform_user_name $song $.session_user_id}}
-                    </dt>
-                    <dt class="queue_tool">
-                        <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{$song.ServiceId}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></li>
+                <p class="queue_song">{{$song.Title}}</p>
+            </td>
+            <td>
+                <div class="btn-group">
+                    {{if call $.matches_session_user $song.UserId $.session_user_id}}
+                    <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    {{else}}
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    {{end}}
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <h5 class="dropdown-header">#{{call $.increment_index $index}}</h5>
+                        <h5 class="dropdown-header">Submitted by: {{call $.transform_user_name $song $.session_user_id}}</h5>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="https://www.youtube.com/watch?v={{$song.ServiceId}}" target="_blank">Open</a></li>
                         {{if call $.matches_session_user $song.UserId $.session_user_id}}
-                        <li><button id="{{$song.SongId}}" type="button" class="btn btn-default queue_rm"><span class="glyphicon glyphicon-remove"></span></button></li>
+                        <li><a class="queue_rm" id="{{$song.SongId}}" href="#">Delete</li>
                         {{end}}
-                    </dt>
-                </dl>
+                    </ul>
+                </div>
             </td>
-            <td class="queue_song" data-toggle="collapse" data-target="#vid_{{$index}}">
-                <span class="queue_song_hint glyphicon glyphicon-collapse-down"></span>
-            </td>
-
-        </tr>
         {{end}}
     </tbody>
 </table>
-

@@ -84,7 +84,6 @@ $(document).ready(function(){
                         $("#queue_title").on("tap", refresh_elements);
                         $(".queue_rm").click(remove_song);
                         $(".skip_now_playing").click(skip_song);
-                        flip_collapse_hint();
                     },
                 });
             },
@@ -135,28 +134,6 @@ $(document).ready(function(){
         });
     };
 
-    /*----------------------------------------------------------------
-    Registers handlers to flip the collapse hint on a song in the
-    queue
-    ----------------------------------------------------------------*/
-    function flip_collapse_hint() {
-        // go from arrow down to up when the song details
-        // are shown
-        $("[id^=vid_]").on('shown.bs.collapse', function(event) {
-            var song_hint = $(this).parent().next().children(".glyphicon-collapse-down")
-            song_hint.toggleClass("glyphicon-collapse-down")
-            song_hint.toggleClass("glyphicon-collapse-up")
-        });
-
-        // go from arrow up to down when the songs details
-        // are hidden
-        $("[id^=vid_]").on('hidden.bs.collapse', function(event) {
-            var song_hint = $(this).parent().next().children(".glyphicon-collapse-up")
-            song_hint.toggleClass("glyphicon-collapse-up")
-            song_hint.toggleClass("glyphicon-collapse-down")
-        });
-    }
-
     // Register handler on queue items to remove song
     $(".queue_rm").click(remove_song);
 
@@ -166,6 +143,4 @@ $(document).ready(function(){
     // Register handler on the queue title to refresh items
     $("#queue_title").click(refresh_elements);
     $("#queue_title").on("tap", refresh_elements);
-
-    flip_collapse_hint();
 });

@@ -5,9 +5,9 @@
         <div id="banner_detail" >
             <p>Submitted by {{call $.transform_user_name .song .session_user_id}}
             <dt class="queue_tool">
-                <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{.song.ServiceId}}" target="_blank"><span class="glyphicon glyphicon-export"></span></a></li>
+                <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{.song.ServiceId}}" target="_blank">Open</a></li>
                 {{if call $.matches_session_user .song.UserId .session_user_id}}
-                <li><button id="{{.song.SongId}}" type="button" class="btn btn-default skip_now_playing"><span class="glyphicon glyphicon-step-forward"></span></button></li>
+                <li><button id="{{.song.SongId}}" type="button" class="btn btn-default skip_now_playing">Skip Song</button></li>
                 {{end}}
             </dt>
         </div>

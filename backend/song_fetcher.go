@@ -24,7 +24,7 @@ var (
 	validFile = regexp.MustCompile(`(^\/).*\.(mp3|flac)$`)
 
 	// match youtube links
-	validYt = regexp.MustCompile(`^(https?://)(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
+	validYt = regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
 
 	// match the full length youtube url
 	fullYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?youtube\.com/watch(\S+)$`)
@@ -93,6 +93,9 @@ func (fetcher *SongFetcher) fetchYoutubeSongData(link string, song *cmpb.Song) e
 	song.Title = item.Snippet.Title
 	song.ServiceId = songId
 	song.Service = cmpb.ServiceType_Youtube
+	song.Metadata = &cmpb.Metadata{
+		Thumbnail: fmt.Sprintf("https://i.ytimg.com/vi/%s/mqdefault.jpg", songId),
+	}
 
 	return nil
 }

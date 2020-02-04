@@ -26,6 +26,7 @@ var ErrMissingRoomName = errors.New("Missing room name.")
 var ErrMissingSessionToken = errors.New("Missing session token. Please log back in.")
 var ErrMissingLink = errors.New("Missing song link.")
 var ErrRemoveMissingSong = errors.New("Did not supply a song to remove.")
+var ErrFailedToProcessSong = errors.New("Could not process your submission.")
 
 const (
 	LogPrefix      string = "ytb-fe" // logging prefix name
@@ -125,6 +126,7 @@ func (s *FrontendServer) HandleIndex(context *gin.Context) {
 			"queue":                playlist.Songs,
 			"session_user_id":      userId,
 			"increment_index":      increment_index,
+			"transform_thumbnail":  s.transformThumbnailLink,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
 		})
@@ -147,6 +149,7 @@ func (s *FrontendServer) HandlePlaylist(context *gin.Context) {
 			"queue":                playlist.Songs,
 			"session_user_id":      userId,
 			"increment_index":      increment_index,
+			"transform_thumbnail":  s.transformThumbnailLink,
 			"transform_user_name":  s.transformUsername,
 			"matches_session_user": s.matchesSessionUser,
 		})
@@ -283,6 +286,14 @@ func (s *FrontendServer) transformUsername(song *cmpb.Song, session_user_id uint
 		return "You"
 	} else {
 		return song.Username
+	}
+}
+
+func (s *FrontendServer) transformThumbnailLink(song *cmpb.Song) string {
+	if len(song.Metadata.Thumbnail) == 0 {
+		return "/static/img/missing_thumbnail.png"
+	} else {
+		return song.Metadata.Thumbnail
 	}
 }
 

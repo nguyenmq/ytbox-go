@@ -43,7 +43,7 @@ a {
 }
 
 .vid_row {
-    font-size: 16pt;
+    font-size: 13pt;
     cursor: pointer;
 }
 
@@ -218,4 +218,14 @@ a {
 #logo {
     margin-bottom: 15px;
     max-height: 90px;
+}
+
+.dropdown-menu li a {
+    padding-top: 1em;
+    padding-bottom: 1em;
+}
+
+.btn-danger {
+    background-color: #a9a9a9 !important;
+    border-color: #464646 !important;
 }

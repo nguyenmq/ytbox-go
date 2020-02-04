@@ -59,6 +59,10 @@ func (c *BackendClient) SendNewSong(link string, user_id uint32) (*bepb.Error, e
 		log.Printf("Failed to send new song with error: %v\n", err)
 	}
 
+	if !response.Success {
+		err = ErrFailedToProcessSong
+	}
+
 	return response, err
 }
 

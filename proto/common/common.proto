@@ -41,4 +41,12 @@ message Song {
 
     // id of the room where the song was submitted
     uint32 roomId = 7;
+
+    // metadata about the song
+    Metadata metadata = 8;
+}
+
+message Metadata {
+    string thumbnail = 1;
+    string duration = 2;
 }
