@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -92,7 +92,10 @@ func connectToRemote() (*grpc.ClientConn, bepb.YtbBackendClient) {
  */
 func sendCommand(client bepb.YtbBackendClient) {
 	link := *sendLink
-	_, err := client.SendSong(context.Background(), &bepb.Submission{link, *sendUser})
+	_, err := client.SendSong(context.Background(), &bepb.Submission{
+		Link:   link,
+		UserId: *sendUser,
+	})
 	if err != nil {
 		fmt.Printf("failed to call SendSong: %v\n", err)
 		os.Exit(1)
