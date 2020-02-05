@@ -25,6 +25,7 @@ var (
 	port      = app.Flag("port", "Port to listen on").Default("9008").Short('p').String()
 	hashFile  = app.Flag("hash", "File containing hash key").Default("hash.key").String()
 	blockFile = app.Flag("block", "File containing block key").Default("block.key").String()
+	debug     = app.Flag("debug", "Enable debug mode.").Short('d').Bool()
 )
 
 func main() {
@@ -51,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := frontend.NewServer(addr+":"+*port, []byte(hashKey), []byte(blockKey))
+	server := frontend.NewServer(addr+":"+*port, []byte(hashKey), []byte(blockKey), *debug)
 
 	go func() {
 		stop := make(chan os.Signal)

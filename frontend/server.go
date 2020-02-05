@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/securecookie"
 
+	"github.com/nguyenmq/ytbox-go/common"
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
@@ -51,13 +52,19 @@ type FrontendServer struct {
 	cookie *securecookie.SecureCookie // secure cookie provider
 }
 
-func NewServer(addr string, hashKey []byte, blockKey []byte) *FrontendServer {
+func NewServer(addr string, hashKey []byte, blockKey []byte, isDebug bool) *FrontendServer {
 	frontend := new(FrontendServer)
 	frontend.addr = addr
 	frontend.cookie = securecookie.New(hashKey, blockKey)
 
+	gin.DefaultWriter = common.GetLogger()
+	gin.DefaultErrorWriter = common.GetLogger()
+	gin.SetMode(gin.ReleaseMode)
 	htmlConfig := goview.DefaultConfig
-	htmlConfig.DisableCache = true
+
+	if isDebug {
+		htmlConfig.DisableCache = true
+	}
 
 	// set up gin router
 	frontend.router = gin.Default()

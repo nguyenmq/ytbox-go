@@ -17,6 +17,8 @@ const (
 	defaultPerms os.FileMode = 0666
 )
 
+var logger io.Writer = os.Stdout
+
 /*
  * Initialize the standard logging in a common way across all yt_box.
  *
@@ -43,8 +45,13 @@ func InitLogger(prefix string, useStdOut bool) *os.File {
 		writer = fil
 	}
 
-	log.SetOutput(writer)
+	logger = writer
+	log.SetOutput(logger)
 	log.SetPrefix(logPrefix)
 
 	return fil
+}
+
+func GetLogger() io.Writer {
+	return logger
 }
