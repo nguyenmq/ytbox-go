@@ -9,16 +9,16 @@
     <tbody>
         {{range $index, $song := .queue}}
         <tr class="vid_row" >
-            <td>
-                <img src="{{call $.transform_thumbnail $song}}" alt="{{$song.Title}}" height=80>
+            <td width=130>
+                <img src="{{call $.transform_thumbnail $song}}" alt="{{$song.Title}}" width=130>
             </td>
             <td>
                 <p class="queue_song">{{$song.Title}}</p>
             </td>
-            <td>
+            <td align="right">
                 <div class="btn-group">
                     {{if call $.matches_session_user $song.UserId $.session_user_id}}
-                    <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{else}}
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{end}}
@@ -27,7 +27,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-right">
                         <h5 class="dropdown-header">#{{call $.increment_index $index}}</h5>
-                        <h5 class="dropdown-header">Submitted by: {{call $.transform_user_name $song $.session_user_id}}</h5>
+                        <h5 class="dropdown-header">Submitted by {{call $.transform_user_name $song $.session_user_id}}</h5>
                         <li role="separator" class="divider"></li>
                         <li><a href="https://www.youtube.com/watch?v={{$song.ServiceId}}" target="_blank">Open</a></li>
                         {{if call $.matches_session_user $song.UserId $.session_user_id}}

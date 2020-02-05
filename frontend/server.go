@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/foolin/goview"
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/securecookie"
@@ -55,9 +56,12 @@ func NewServer(addr string, hashKey []byte, blockKey []byte) *FrontendServer {
 	frontend.addr = addr
 	frontend.cookie = securecookie.New(hashKey, blockKey)
 
+	htmlConfig := goview.DefaultConfig
+	htmlConfig.DisableCache = true
+
 	// set up gin router
 	frontend.router = gin.Default()
-	frontend.router.HTMLRender = ginview.Default()
+	frontend.router.HTMLRender = ginview.New(htmlConfig)
 	frontend.router.Static("/static", "./static")
 	frontend.router.StaticFile("/favicon.ico", "./static/img/favicon.ico")
 

@@ -1,15 +1,36 @@
 <div id="np" class="jumbotron" data-target="#banner_detail">
-    <img src="/static/img/ytbox_tilt_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
-    <h2 id="now_playing_title">{{.now_playing}}</h2>
-    {{if .has_song_playing}}
-        <div id="banner_detail" >
-            <p>Submitted by {{call $.transform_user_name .song .session_user_id}}
-            <dt class="queue_tool">
-                <li><a class="btn btn-default" href="https://www.youtube.com/watch?v={{.song.ServiceId}}" target="_blank">Open</a></li>
-                {{if call $.matches_session_user .song.UserId .session_user_id}}
-                <li><button id="{{.song.SongId}}" type="button" class="btn btn-default skip_now_playing">Skip Song</button></li>
+    <table width="100%" id="banner_table">
+        <tr>
+            <td>
+                <img src="/static/img/ytbox_tilt_white.svg" alt="yt_box logo" class="img-responsive" id="banner_logo">
+            </td>
+            <td align="right">
+                {{if .has_song_playing}}
+                <div class="btn-group" id="now_playing_button">
+                    {{if call $.matches_session_user .song.UserId .session_user_id}}
+                    <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    {{else}}
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    {{end}}
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <h5 class="dropdown-header">Submitted by {{call $.transform_user_name .song .session_user_id}}</h5>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="https://www.youtube.com/watch?v={{.song.ServiceId}}" target="_blank">Open</a></li>
+                        {{if call $.matches_session_user .song.UserId .session_user_id}}
+                        <li><a class="skip_now_playing" id="{{.song.SongId}}" href="#">Skip Song</li>
+                        {{end}}
+                    </ul>
+                </div>
                 {{end}}
-            </dt>
-        </div>
-    {{end}}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <h2 id="now_playing_title">{{.now_playing}}</h2>
+            </td>
+        </tr>
+    </table>
 </div>

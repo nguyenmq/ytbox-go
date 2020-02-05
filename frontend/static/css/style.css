@@ -44,7 +44,6 @@ a {
 
 .vid_row {
     font-size: 13pt;
-    cursor: pointer;
 }
 
 .vid_row dl {
@@ -167,18 +166,11 @@ a {
 }
 
 #banner_logo {
-    /* display: inline; */
-    margin-bottom: 10pt;
-    max-height: 14pt;
+    max-height: 18pt;
 }
 
 #banner_detail {
     font-size: 11pt;
-}
-
-#banner_detail .btn {
-    font-size: 9pt !important;
-    padding: 5px 10px !important;
 }
 
 #user_opt {
@@ -225,7 +217,15 @@ a {
     padding-bottom: 1em;
 }
 
-.btn-danger {
-    background-color: #a9a9a9 !important;
-    border-color: #464646 !important;
+.close {
+    font-size: 26pt !important;
+}
+
+#now_playing_button {
+    padding-top: 0pt !important;
+    padding-bottom: 6pt !important;
+}
+
+.btn {
+    padding: 3pt 6pt !important;
 }
