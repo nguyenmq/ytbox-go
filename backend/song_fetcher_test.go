@@ -14,6 +14,7 @@ var testLinks = []string{
 	"https://youtu.be/ed0CcFcBBMI",
 	"https://youtu.be/bL_NcoCJgzo",
 	"https://youtu.be/A1oxh8Z-2ko",
+	"https://m.youtube.com/watch?v=VQa9Q5_Dcck",
 	"https://google.com",
 }
 
@@ -27,6 +28,7 @@ var expectedIds = []string{
 	"ed0CcFcBBMI",
 	"bL_NcoCJgzo",
 	"A1oxh8Z-2ko",
+	"VQa9Q5_Dcck",
 	"",
 }
 

@@ -24,10 +24,10 @@ var (
 	validFile = regexp.MustCompile(`(^\/).*\.(mp3|flac)$`)
 
 	// match youtube links
-	validYt = regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)(\S+)$`)
+	validYt = regexp.MustCompile(`^(https?://)?(www\.)?(m\.)?(youtube\.com|youtu\.be)(\S+)$`)
 
 	// match the full length youtube url
-	fullYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?youtube\.com/watch(\S+)$`)
+	fullYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?(m\.)?youtube\.com/watch(\S+)$`)
 
 	// match the shortened youtube url
 	shortYoutubeLink = regexp.MustCompile(`^(https?://)?(www\.)?youtu\.be/(\S+)$`)
