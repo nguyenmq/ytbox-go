@@ -89,15 +89,20 @@ func (fetcher *SongFetcher) fetchYoutubeSongData(link string, song *cmpb.Song) e
 		return errors.New("Failed to fetch song metadata")
 	}
 
-	item := response.Items[0]
-	song.Title = item.Snippet.Title
-	song.ServiceId = songId
-	song.Service = cmpb.ServiceType_Youtube
-	song.Metadata = &cmpb.Metadata{
-		Thumbnail: fmt.Sprintf("https://i.ytimg.com/vi/%s/mqdefault.jpg", songId),
+	if len(response.Items) > 0 {
+		item := response.Items[0]
+		song.Title = item.Snippet.Title
+		song.ServiceId = songId
+		song.Service = cmpb.ServiceType_Youtube
+		song.Metadata = &cmpb.Metadata{
+			Thumbnail: fmt.Sprintf("https://i.ytimg.com/vi/%s/mqdefault.jpg", songId),
+		}
+
+		return nil
 	}
 
-	return nil
+	log.Printf("Did not get proper metadata from youtube: %v", response)
+	return errors.New("Failed to fetch song metadata")
 }
 
 /*

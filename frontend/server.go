@@ -28,7 +28,7 @@ var ErrMissingRoomName = errors.New("Missing room name.")
 var ErrMissingSessionToken = errors.New("Missing session token. Please log back in.")
 var ErrMissingLink = errors.New("Missing song link.")
 var ErrRemoveMissingSong = errors.New("Did not supply a song to remove.")
-var ErrFailedToProcessSong = errors.New("Could not process your submission.")
+var ErrFailedToProcessSong = errors.New("Could not process your submission. Please check your link.")
 
 const (
 	LogPrefix      string = "ytb-fe" // logging prefix name
