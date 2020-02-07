@@ -1,8 +1,16 @@
 <div class="row queue_header">
-    <ul>
-        <li><span id="loading" class="small glyphicon glyphicon-refresh" aria-hidden="true"></span></li>
-        <li><h2 id="queue_title"> Video Queue <small>({{.song_count}})</small></h2></li>
-    </ul>
+    <table width=100%>
+        <tr>
+            <td>
+                <h2 id="queue_title"> Playlist <small>({{.song_count}})</small></h2>
+            </td>
+            <td align="right">
+                <button type="button" class="btn btn-default" id="queue_button" aria-label="Center Align">
+                    <span id="loading" class="small glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                </button>
+            </td>
+        </tr>
+    </table>
 </div>
 
 <table class="table table-condensed table-striped">
@@ -18,9 +26,9 @@
             <td align="right">
                 <div class="btn-group">
                     {{if call $.matches_session_user $song.UserId $.session_user_id}}
-                    <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-warning dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{else}}
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-default dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{end}}
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>

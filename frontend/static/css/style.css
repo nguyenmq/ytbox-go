@@ -125,11 +125,7 @@ a {
     width: 100pt;
     background: #ff4646;
     color: white;
-}
-
-#submit_btn img {
-    display: inline;
-    height: inherit;
+    margin-bottom: 1em;
 }
 
 .spin {
@@ -226,6 +222,6 @@ a {
     padding-bottom: 6pt !important;
 }
 
-.btn {
+.song_info {
     padding: 3pt 6pt !important;
 }

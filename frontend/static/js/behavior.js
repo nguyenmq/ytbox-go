@@ -82,6 +82,7 @@ $(document).ready(function(){
                         $("#queue_container").append(data);
                         $("#queue_title").click(refresh_elements);
                         $("#queue_title").on("tap", refresh_elements);
+                        $("#queue_button").click(refresh_elements);
                         $(".queue_rm").click(remove_song);
                         $(".skip_now_playing").click(skip_song);
                     },
@@ -143,4 +144,5 @@ $(document).ready(function(){
     // Register handler on the queue title to refresh items
     $("#queue_title").click(refresh_elements);
     $("#queue_title").on("tap", refresh_elements);
+    $("#queue_button").click(refresh_elements);
 });
