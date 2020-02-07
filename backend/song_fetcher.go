@@ -96,6 +96,7 @@ func (fetcher *SongFetcher) fetchYoutubeSongData(link string, song *cmpb.Song) e
 		song.Service = cmpb.ServiceType_Youtube
 		song.Metadata = &cmpb.Metadata{
 			Thumbnail: fmt.Sprintf("https://i.ytimg.com/vi/%s/mqdefault.jpg", songId),
+			Duration:  item.ContentDetails.Duration,
 		}
 
 		return nil

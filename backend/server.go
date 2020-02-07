@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/rickb777/date/period"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
@@ -25,7 +27,8 @@ import (
 )
 
 const (
-	LogPrefix string = "ytb-be" // logging prefix name
+	LogPrefix      string = "ytb-be" // logging prefix name
+	allowedMinutes        = 10
 )
 
 /*
@@ -129,17 +132,29 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 
 	err := s.fetcher.fetchSongData(sub.Link, song)
 	if err != nil {
-		response.Message = err.Error()
+		response.Message = "Failed to fetch metadata for your song. Please check your link."
 		log.Println(err.Error())
 		return response, nil
 	}
 
-	response.Success = true
-	response.Message = "Success"
-	s.queueMgr.AddSong(song)
-	s.dbManager.AddSong(song)
-	s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
-	log.Printf("Song data: { %v}", song)
+	duration, err := period.Parse(song.Metadata.Duration)
+	if err != nil {
+		response.Message = "Got an unexpected response from YouTube."
+		log.Printf("Failed to parse duration %s with error %s\n", song.Metadata.Duration, err.Error())
+		return response, nil
+	}
+
+	if isValidDuration(duration) {
+		response.Success = true
+		response.Message = "Success"
+		s.queueMgr.AddSong(song)
+		s.dbManager.AddSong(song)
+		s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
+		log.Printf("Song data: { %v}", song)
+		return response, nil
+	} else {
+		response.Message = fmt.Sprintf("Please do no submit songs greater than %d minutes.", allowedMinutes)
+	}
 
 	return response, nil
 }
@@ -426,4 +441,8 @@ func (s *BackendServer) GetRoom(con context.Context, room *bepb.Room) (*bepb.Roo
 	}
 
 	return response, nil
+}
+
+func isValidDuration(duration period.Period) bool {
+	return !duration.IsZero() && duration.Minutes() < allowedMinutes
 }

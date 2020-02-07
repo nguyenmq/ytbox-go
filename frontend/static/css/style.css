@@ -185,10 +185,6 @@ a {
     text-align: center;
 }
 
-.queue_song {
-    cursor: pointer;
-}
-
 .queue_tool {
     margin-top: 5px;
     list-style-type: none;

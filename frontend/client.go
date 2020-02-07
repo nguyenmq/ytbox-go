@@ -5,6 +5,7 @@
 package frontend
 
 import (
+	"errors"
 	"log"
 
 	"golang.org/x/net/context"
@@ -60,7 +61,7 @@ func (c *BackendClient) SendNewSong(link string, user_id uint32) (*bepb.Error, e
 	}
 
 	if !response.Success {
-		err = ErrFailedToProcessSong
+		err = errors.New(response.Message)
 	}
 
 	return response, err
