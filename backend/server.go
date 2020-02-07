@@ -377,7 +377,9 @@ func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) err
 	}()
 
 	<-stop
-	s.playerMgr.remove(id)
+	if s.playerMgr.remove(id) == 0 {
+		s.queueMgr.ClearNowPlaying()
+	}
 	return nil
 }
 

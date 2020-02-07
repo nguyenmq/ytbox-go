@@ -100,13 +100,14 @@ func (mgr *playerManager) sendToPlayers(control *bepb.PlayerControl) {
 /*
  * Remove a player stream that the player manager was keeping track of
  */
-func (mgr *playerManager) remove(id int) {
+func (mgr *playerManager) remove(id int) int {
 	mgr.playerLock.Lock()
 	defer mgr.playerLock.Unlock()
 
 	delete(mgr.streams, id)
 	delete(mgr.ready, id)
 	log.Printf("Removed player %d", id)
+	return len(mgr.streams)
 }
 
 /*

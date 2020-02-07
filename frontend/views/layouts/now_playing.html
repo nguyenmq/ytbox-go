@@ -8,9 +8,9 @@
                 {{if .has_song_playing}}
                 <div class="btn-group" id="now_playing_button">
                     {{if call $.matches_session_user .song.UserId .session_user_id}}
-                    <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-warning dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{else}}
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-default dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{end}}
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
