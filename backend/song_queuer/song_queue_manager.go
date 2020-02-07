@@ -15,6 +15,10 @@ import (
 	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
 )
 
+const (
+	QueueSnapshot string = "/tmp/ytbox.queue" // location of the queue snapshot
+)
+
 /*
  * Manages the song queue
  */

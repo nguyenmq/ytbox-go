@@ -179,6 +179,7 @@ func (mgr *playerManager) getNextSong(nextSong chan<- bepb.PlayerControl) {
 	// Do a final check to see if all players are ready for the next song
 	if mgr.playersReady() {
 		song := mgr.queueMgr.PopQueue()
+		mgr.queueMgr.SavePlaylist(queuer.QueueSnapshot)
 		log.Println("Popped song")
 		control := bepb.PlayerControl{}
 

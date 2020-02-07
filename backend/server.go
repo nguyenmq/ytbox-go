@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	LogPrefix     string = "ytb-be"           // logging prefix name
-	queueSnapshot string = "/tmp/ytbox.queue" // location of the queue snapshot
+	LogPrefix string = "ytb-be" // logging prefix name
 )
 
 /*
@@ -139,6 +138,7 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 	response.Message = "Success"
 	s.queueMgr.AddSong(song)
 	s.dbManager.AddSong(song)
+	s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
 	log.Printf("Song data: { %v}", song)
 
 	return response, nil
@@ -299,6 +299,7 @@ func (s *BackendServer) RemoveSong(con context.Context, eviction *bepb.Eviction)
 		return &bepb.Error{Success: false, Message: err.Error()}, nil
 	} else {
 		log.Printf("Removed song: {song id: %d, user id: %d}", eviction.GetSongId(), eviction.GetUserId())
+		s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
 		return &bepb.Error{Success: true, Message: "Success"}, nil
 	}
 }
