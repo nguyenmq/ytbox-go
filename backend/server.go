@@ -162,17 +162,9 @@ func (s *BackendServer) loadPlaylistFromFile(file string) {
 	}
 
 	log.Printf("Loading songs from file \"%s\":", file)
-	for i := 0; i < len(playlist.Songs); i++ {
-		song := &cmpb.Song{
-			Title:     playlist.Songs[i].Title,
-			SongId:    playlist.Songs[i].SongId,
-			Username:  playlist.Songs[i].Username,
-			UserId:    playlist.Songs[i].UserId,
-			Service:   playlist.Songs[i].Service,
-			ServiceId: playlist.Songs[i].ServiceId,
-		}
+	for index, song := range playlist.Songs {
 		s.queueMgr.AddSong(song)
-		log.Printf("%3d. { %v}", i+1, song)
+		log.Printf("%3d. { %v}", index+1, song)
 	}
 }
 
