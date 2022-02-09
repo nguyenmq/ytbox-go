@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/dhowden/tag"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
@@ -49,7 +50,7 @@ func (fetcher *SongFetcher) init(apiKey string) {
 
 func (fetcher *SongFetcher) fetchSongData(link string, song *cmpb.Song) error {
 	if validYt.MatchString(link) {
-		return fetcher.fetchYoutubeSongData(link, song)
+		return fetcher.fetchYoutubeDlp(link, song)
 	} else if validFile.MatchString(link) {
 		return fetcher.fetchLocalSongData(link, song)
 	} else {
@@ -69,6 +70,34 @@ func extractVideoId(link string) string {
 }
 
 /*
+ * Fetch song data using yt-dlp
+ */
+func (fetcher *SongFetcher) fetchYoutubeDlp(link string, song *cmpb.Song) error {
+	songId := extractVideoId(link)
+	if len(songId) == 0 {
+		log.Printf("Failed to extract id from link: %s\n", link)
+		return errors.New("Failed to extract song id")
+	}
+
+	title, err := exec.Command("yt-dlp", "-e", link).Output()
+
+	if err != nil {
+		log.Printf("Failed to run yt-dlp with error: %v", err)
+		return errors.New("Failed to fetch song data")
+	}
+
+	song.Title = strings.TrimSpace(string(title[:]))
+	song.ServiceId = songId
+	song.Service = cmpb.ServiceType_Youtube
+	song.Metadata = &cmpb.Metadata{
+		Thumbnail: fmt.Sprintf("https://i.ytimg.com/vi/%s/mqdefault.jpg", songId),
+		Duration:  "",
+	}
+
+	return nil
+}
+
+/*
  * Fetch song data for the given link. This includes the song title, service
  * id, and service type. Currently only YouTube links are supported. Populates
  * the Song structure with the song data it retrieves. Returns an error status.
@@ -80,7 +109,8 @@ func (fetcher *SongFetcher) fetchYoutubeSongData(link string, song *cmpb.Song) e
 		return errors.New("Failed to extract song id")
 	}
 
-	request := fetcher.ytService.Videos.List("snippet,contentDetails")
+	args := []string{"snippet", "contentDetails"}
+	request := fetcher.ytService.Videos.List(args)
 	request.Id(songId)
 	response, err := request.Do()
 

@@ -13,6 +13,12 @@ and the Go plugin. Build the `.proto` files:
 go get -u github.com/golang/protobuf/protoc-gen-go
 protoc -I proto/backend -I "$GOPATH/src" --go_out=plugins=grpc:proto/backend proto/backend/*.proto
 protoc -I proto/common -I "$GOPATH/src" --go_out=plugins=grpc:proto/common proto/common/common.proto
+
+protoc --go_out=. --go_opt=paths=source_relative \
+--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+internal/proto/common/common.proto \
+internal/proto/backend/backend.proto \
+internal/proto/backend/player.proto \
 ```
 
 Install `youtube-dl` and `mpv`.

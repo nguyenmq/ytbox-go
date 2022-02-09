@@ -8,7 +8,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -20,10 +19,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	queuer "github.com/nguyenmq/ytbox-go/backend/song_queuer"
-	db "github.com/nguyenmq/ytbox-go/database"
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	queuer "github.com/nguyenmq/ytbox-go/internal/backend/song_queuer"
+	db "github.com/nguyenmq/ytbox-go/internal/database"
+	bepb "github.com/nguyenmq/ytbox-go/internal/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 const (
@@ -43,6 +42,8 @@ type BackendServer struct {
 	playerMgr *playerManager           // player manager
 	streamWG  sync.WaitGroup           // wait group for streaming goroutines
 	fetcher   *SongFetcher             // Song metadata fetcher
+	bepb.UnimplementedYtbBackendServer
+	bepb.UnimplementedYtbBePlayerServer
 }
 
 /*
@@ -137,24 +138,12 @@ func (s *BackendServer) SendSong(con context.Context, sub *bepb.Submission) (*be
 		return response, nil
 	}
 
-	duration, err := period.Parse(song.Metadata.Duration)
-	if err != nil {
-		response.Message = "Got an unexpected response from YouTube."
-		log.Printf("Failed to parse duration %s with error %s\n", song.Metadata.Duration, err.Error())
-		return response, nil
-	}
-
-	if isValidDuration(duration) {
-		response.Success = true
-		response.Message = "Success"
-		s.queueMgr.AddSong(song)
-		s.dbManager.AddSong(song)
-		s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
-		log.Printf("Song data: { %v}", song)
-		return response, nil
-	} else {
-		response.Message = fmt.Sprintf("Please do no submit songs greater than %d minutes.", allowedMinutes)
-	}
+	response.Success = true
+	response.Message = "Success"
+	s.queueMgr.AddSong(song)
+	s.dbManager.AddSong(song)
+	s.queueMgr.SavePlaylist(queuer.QueueSnapshot)
+	log.Printf("Song data: { %v}", song)
 
 	return response, nil
 }

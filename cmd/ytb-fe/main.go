@@ -12,8 +12,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/nguyenmq/ytbox-go/common"
-	"github.com/nguyenmq/ytbox-go/frontend"
+	"github.com/nguyenmq/ytbox-go/internal/common"
+	"github.com/nguyenmq/ytbox-go/internal/frontend"
 )
 
 /*

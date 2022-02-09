@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	sqlite "github.com/mattn/go-sqlite3"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 const (

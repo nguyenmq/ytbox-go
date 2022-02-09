@@ -8,8 +8,9 @@
 syntax = "proto3";
 
 package backend_pb;
+option go_package = "github.com/nguyenmq/ytbox-go/internal/proto/backend";
 
-import "github.com/nguyenmq/ytbox-go/proto/common/common.proto";
+import "internal/proto/common/common.proto";
 
 service YtbBackend {
     // Submit a song to the backend service to be added to the play queue

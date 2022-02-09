@@ -11,8 +11,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	bepb "github.com/nguyenmq/ytbox-go/internal/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 const (

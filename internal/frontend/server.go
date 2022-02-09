@@ -17,8 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/securecookie"
 
-	"github.com/nguyenmq/ytbox-go/common"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	"github.com/nguyenmq/ytbox-go/internal/common"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 var ErrFailedLogin = errors.New("Failed to login user.")

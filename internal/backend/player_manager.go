@@ -12,8 +12,8 @@ import (
 	"log"
 	"sync"
 
-	queuer "github.com/nguyenmq/ytbox-go/backend/song_queuer"
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
+	queuer "github.com/nguyenmq/ytbox-go/internal/backend/song_queuer"
+	bepb "github.com/nguyenmq/ytbox-go/internal/proto/backend"
 )
 
 const (

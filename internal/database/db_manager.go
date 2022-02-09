@@ -7,8 +7,8 @@ package database
 import (
 	"time"
 
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	bepb "github.com/nguyenmq/ytbox-go/internal/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 type UserData struct {

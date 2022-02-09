@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	bepb "github.com/nguyenmq/ytbox-go/proto/backend"
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	bepb "github.com/nguyenmq/ytbox-go/internal/proto/backend"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 /*

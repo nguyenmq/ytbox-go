@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 const markedForRemoval = -1

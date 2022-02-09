@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	cmpb "github.com/nguyenmq/ytbox-go/proto/common"
+	cmpb "github.com/nguyenmq/ytbox-go/internal/proto/common"
 )
 
 /*
