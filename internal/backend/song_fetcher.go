@@ -45,12 +45,20 @@ type SongFetcher struct {
 }
 
 func (fetcher *SongFetcher) init(apiKey string) {
-	fetcher.ytService, _ = youtube.NewService(context.Background(), option.WithAPIKey(apiKey))
+	if apiKey == "" {
+		fetcher.ytService = nil
+	} else {
+		fetcher.ytService, _ = youtube.NewService(context.Background(), option.WithAPIKey(apiKey))
+	}
 }
 
 func (fetcher *SongFetcher) fetchSongData(link string, song *cmpb.Song) error {
 	if validYt.MatchString(link) {
-		return fetcher.fetchYoutubeDlp(link, song)
+		if fetcher.ytService == nil {
+			return fetcher.fetchYoutubeDlp(link, song)
+		} else {
+			return fetcher.fetchYoutubeSongData(link, song)
+		}
 	} else if validFile.MatchString(link) {
 		return fetcher.fetchLocalSongData(link, song)
 	} else {
@@ -79,7 +87,7 @@ func (fetcher *SongFetcher) fetchYoutubeDlp(link string, song *cmpb.Song) error 
 		return errors.New("Failed to extract song id")
 	}
 
-	title, err := exec.Command("yt-dlp", "-e", link).Output()
+	title, err := exec.Command("yt-dlp", "--print", "title", link).Output()
 
 	if err != nil {
 		log.Printf("Failed to run yt-dlp with error: %v", err)

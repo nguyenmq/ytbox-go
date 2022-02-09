@@ -25,7 +25,7 @@ var (
 	port      = app.Flag("port", "Port to listen on").Default("9009").Short('p').String()
 	loadFile  = app.Flag("load", "Load a serialized protobuf playlist from a file").Short('l').ExistingFile()
 	dbFile    = app.Flag("database", "Path to database").Default("./ytbox.db").Short('d').String()
-	ytApiFile = app.Flag("apiKey", "Path to file containing YouTube api key").Default("./yt_api.key").String()
+	ytApiFile = app.Flag("apiKey", "Path to file containing YouTube api key").String()
 )
 
 func main() {
@@ -40,13 +40,18 @@ func main() {
 		addr = "0.0.0.0"
 	}
 
-	ytApiKey, err := ioutil.ReadFile(*ytApiFile)
-	if err != nil {
-		log.Printf("Could not read api key file at %s with error: %s\n", *ytApiFile, err.Error())
-		os.Exit(1)
+	ytApiKeyString := ""
+	if *ytApiFile != "" {
+		ytApiKey, err := ioutil.ReadFile(*ytApiFile)
+		if err != nil {
+			log.Printf("Could not read api key file at %s with error: %s\n", *ytApiFile, err.Error())
+			os.Exit(1)
+		}
+
+		ytApiKeyString = string(ytApiKey)
 	}
 
-	ytbServer := backend.NewServer(addr+":"+*port, *loadFile, *dbFile, string(ytApiKey))
+	ytbServer := backend.NewServer(addr+":"+*port, *loadFile, *dbFile, ytApiKeyString)
 
 	go func() {
 		stop := make(chan os.Signal)
