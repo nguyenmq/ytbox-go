@@ -62,6 +62,16 @@ func (r *Remote) LoadSong(name string, play bool) {
 }
 
 /*
+ * Show the given text on mpv's OSD. Duration is given in milliseconds.
+ */
+func (r *Remote) ShowText(text string, duration string) {
+	_, err := r.conn.Call("show-text", text, duration, 1)
+	if err != nil {
+		fmt.Printf("Failed to show text: %v\n", err)
+	}
+}
+
+/*
  * Toggle the pause state
  */
 func (r *Remote) TogglePause() {
@@ -185,6 +195,7 @@ func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 		link, ok := buildSongLink(status.GetSong())
 		if ok {
 			remote.LoadSong(link, true)
+			remote.ShowText(status.GetSong().GetTitle(), "8000")
 		}
 
 	case bepb.CommandType_Next:
@@ -195,6 +206,7 @@ func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 
 	case bepb.CommandType_Pause:
 		remote.TogglePause()
+		remote.ShowText("Player is paused", "600000")
 	}
 }
 
@@ -211,6 +223,8 @@ func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient, conn *mpv.Connect
 	events, stop := conn.NewEventListener()
 	streamOk := true
 	running := true
+
+	remote.ShowText("Waiting for users to add songs", "600000")
 
 	// send the initial command to the server to signal the player is ready
 	stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
@@ -244,6 +258,7 @@ func interactionLoop(stream bepb.YtbBePlayer_SongPlayerClient, conn *mpv.Connect
 		case event := <-events:
 			if event.Name == "idle" {
 				stream.Send(&bepb.PlayerStatus{Command: bepb.CommandType_Ready})
+				remote.ShowText("Waiting for users to add songs", "600000")
 			}
 		}
 	}
@@ -294,7 +309,24 @@ func buildSongLink(song *cmpb.Song) (string, bool) {
  */
 func startMpv() *exec.Cmd {
 	socketFlag := "--input-ipc-server=" + mpvSocket
-	cmd := exec.Command("mpv", "--idle", socketFlag, "--fullscreen", "--force-window", "--no-osc")
+	cmd := exec.Command("mpv",
+		"--idle",
+		socketFlag,
+		"--fullscreen",
+		"--force-window",
+		"--no-osc",
+		"--osd-align-y=bottom",
+		"--osd-blur=1.0",
+		"--osd-font='Ubuntu'",
+		"--osd-font-size=44")
+	//"--audio-delay=-1.3",
+	//"--audio-display=no",
+	//"--audio-channels=stereo",
+	//"--audio-samplerate=48000",
+	//"--audio-format=s16",
+	//"--ao=pcm",
+	//"--ao-pcm-file=/tmp/snapfifo")
+
 	cmd.Start()
 	time.Sleep(500 * time.Millisecond)
 	return cmd
