@@ -11,28 +11,21 @@ Install [protobuf](https://developers.google.com/protocol-buffers/docs/gotutoria
 and the Go plugin. Build the `.proto` files:
 ```
 go get -u github.com/golang/protobuf/protoc-gen-go
-protoc -I proto/backend -I "$GOPATH/src" --go_out=plugins=grpc:proto/backend proto/backend/*.proto
-protoc -I proto/common -I "$GOPATH/src" --go_out=plugins=grpc:proto/common proto/common/common.proto
-
-protoc --go_out=. --go_opt=paths=source_relative \
---go-grpc_out=. --go-grpc_opt=paths=source_relative \
-internal/proto/common/common.proto \
-internal/proto/backend/backend.proto \
-internal/proto/backend/player.proto \
+make proto
 ```
 
-Install `youtube-dl` and `mpv`.
+Install `yt-dlp` and `mpv`.
 
 ## Build
 The `cmd` sub-directory contains several binaries that can be built using `go
 build` or `go install`.
 
 ### Examples
-Building a single command with debug information and place it locally within
-a `bin` directory:
+
+See `Makefile` for build targets.
+
+Might still need to build the backend with sqlite3 explicitly defined.
+
 ```
-go build -o bin/cli-be ./cmd/ytb-be-cli
-go build -o bin/backend ./cmd/ytb-be
-go build -o bin/frontend ./cmd/ytb-fe
-go build -o bin/player ./cmd/ytb-player/
+go build --tags "libsqlite3 linux" -v -o bin/backend ./cmd/ytb-be
 ```
