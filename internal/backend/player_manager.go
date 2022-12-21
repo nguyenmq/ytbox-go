@@ -223,9 +223,9 @@ func (mgr *playerManager) playersReady() bool {
 	}
 
 	allReady := true
-	for _, ready := range mgr.ready {
-		allReady = allReady && ready
-	}
+	//for _, ready := range mgr.ready {
+	//	allReady = allReady && ready
+	//}
 
 	return allReady
 }

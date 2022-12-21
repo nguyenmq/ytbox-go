@@ -359,6 +359,7 @@ func (s *BackendServer) SongPlayer(stream bepb.YtbBePlayer_SongPlayerServer) err
 			}
 
 			if grpc.Code(err) == codes.Canceled {
+				log.Printf("Error receiving message from remote player: %v", err)
 				break
 			}
 

@@ -25,5 +25,10 @@ bins: backend frontend cli-be player
 all: proto backend frontend cli-be player frontend-assets
 
 clean:
-	-rm $(OUTPUT_PREFIX)/backend $(OUTPUT_PREFIX)/frontend $(OUTPUT_PREFIX)/cli-be $(OUTPUT_PREFIX)/player $(OUTPUT_PREFIX)/static $(OUTPUT_PREFIX)/views
+	-rm $(OUTPUT_PREFIX)/backend
+	-rm $(OUTPUT_PREFIX)/frontend
+	-rm $(OUTPUT_PREFIX)/cli-be
+	-rm $(OUTPUT_PREFIX)/player
+	-rm $(OUTPUT_PREFIX)/static
+	-rm $(OUTPUT_PREFIX)/views
 	-rm $(PROTO_PREFIX)/backend/*.go $(PROTO_PREFIX)/common/*.go
