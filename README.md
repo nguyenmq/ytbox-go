@@ -11,6 +11,8 @@ Install [protobuf](https://developers.google.com/protocol-buffers/docs/gotutoria
 and the Go plugin. Build the `.proto` files:
 ```
 go get -u github.com/golang/protobuf/protoc-gen-go
+go install github.com/golang/protobuf/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 make proto
 ```
 
@@ -20,9 +22,17 @@ Install `yt-dlp` and `mpv`.
 The `cmd` sub-directory contains several binaries that can be built using `go
 build` or `go install`.
 
-### Examples
-
 See `Makefile` for build targets.
+
+## Frontend set up
+
+The frontend requires hash and block keys for the secure cookies. These can be generated using:
+
+```
+make gen-creds
+```
+
+### Examples
 
 Might still need to build the backend with sqlite3 explicitly defined.
 
