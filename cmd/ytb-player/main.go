@@ -203,6 +203,7 @@ func handleNewStatus(status *bepb.PlayerControl, remote *Remote) {
 		// if there are no more songs in the playlist
 		link, _ := buildSongLink(status.GetSong())
 		remote.Next(link)
+		remote.ShowText(status.GetSong().GetTitle(), "8000")
 
 	case bepb.CommandType_Pause:
 		remote.TogglePause()
