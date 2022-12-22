@@ -25,6 +25,7 @@ var (
 	remoteHost = app.Flag("host", "Address of remote ytb-be service").Default("127.0.0.1").Short('h').String()
 	remotePort = app.Flag("port", "Port of remote ytb-be service").Default("9009").Short('p').String()
 	continuous = app.Flag("cont", "Continuous play songs from the queue").Short('c').Bool()
+	audioDelay = app.Flag("audio-delay", "Delay audio within mpv by given number of seconds. See mpv manual for more info").Default("0.0").Short('d').String()
 )
 
 const (
@@ -308,8 +309,9 @@ func buildSongLink(song *cmpb.Song) (string, bool) {
 /*
  * Start mpv in idle mode
  */
-func startMpv() *exec.Cmd {
+func startMpv() (*exec.Cmd, io.ReadCloser) {
 	socketFlag := "--input-ipc-server=" + mpvSocket
+	audioDelayFlag := fmt.Sprintf("--audio-delay=%s", *audioDelay)
 	cmd := exec.Command("mpv",
 		"--idle",
 		socketFlag,
@@ -319,18 +321,22 @@ func startMpv() *exec.Cmd {
 		"--osd-align-y=bottom",
 		"--osd-blur=1.0",
 		"--osd-font='Ubuntu'",
-		"--osd-font-size=44")
-	//"--audio-delay=-1.3",
-	//"--audio-display=no",
-	//"--audio-channels=stereo",
-	//"--audio-samplerate=48000",
-	//"--audio-format=s16",
-	//"--ao=pcm",
-	//"--ao-pcm-file=/tmp/snapfifo")
+		"--osd-font-size=44",
+		audioDelayFlag)
 
-	cmd.Start()
+	// mpv outputs errors regarding bad input via stdout
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+
 	time.Sleep(500 * time.Millisecond)
-	return cmd
+	return cmd, stdout
 }
 
 func main() {
@@ -340,10 +346,12 @@ func main() {
 	conn, stream := connectToRemote()
 	defer conn.Close()
 
-	mpvCmd := startMpv()
+	mpvCmd, mpvStdout := startMpv()
 
 	mpvConn := mpv.NewConnection(mpvSocket)
 	if err := mpvConn.Open(); err != nil {
+		slurp, _ := io.ReadAll(mpvStdout)
+		fmt.Printf("%s\n", slurp)
 		panic(err)
 	}
 
